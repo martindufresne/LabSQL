@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notes de Cours : Bases de Données, Connexion & Moteurs de Recherche SQL</title>
+  <link rel="stylesheet" href="public/css/style.css">
+  <script src="public/js/mermaid.min.js"></script>
+  <style>
+    /* Styles spécifiques aux notes de cours */
+    :root {
+      --sidebar-width: 280px;
+    }
+
+    .course-layout {
+      display: flex;
+      gap: 2.5rem;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      position: relative;
+    }
+
+    /* Sidebar Table des matières */
+    .course-sidebar {
+      width: var(--sidebar-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 2rem;
+      height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem 1rem;
+      font-size: 0.85rem;
+    }
+
+    .sidebar-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-nav {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .sidebar-nav a {
+      display: block;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 0.4rem 0.6rem;
+      border-radius: 4px;
+      line-height: 1.35;
+      transition: all 0.15s ease;
+    }
+
+    .sidebar-nav a:hover {
+      background: #f1f5f9;
+      color: var(--text-primary);
+    }
+
+    .sidebar-nav a.active {
+      background: #eff6ff;
+      color: var(--accent-primary);
+      font-weight: 600;
+      border-left: 3px solid var(--accent-primary);
+      padding-left: calc(0.6rem - 3px);
+    }
+
+    /* Zone de contenu principal */
+    .course-content {
+      flex: 1;
+      min-width: 0; /* Évite l'overflow flex */
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 3rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    /* En-tête du document */
+    .doc-header {
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .doc-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.6rem;
+      background: #e0f2fe;
+      color: #0369a1;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      font-family: var(--font-mono);
+    }
+
+    .doc-title {
+      font-size: 2.1rem;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #0f172a;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.02em;
+    }
+
+    .doc-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+
+    .doc-meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .doc-meta-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      color: var(--text-secondary);
+    }
+
+    .doc-meta-item strong {
+      color: var(--text-primary);
+    }
+
+    .doc-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-print {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--text-primary);
+      color: #ffffff;
+      padding: 0.45rem 0.9rem;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .btn-print:hover {
+      background: #334155;
+    }
+
+    /* Typographie des sections */
+    .course-section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 2rem;
+    }
+
+    .course-section h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .sec-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      background: #eff6ff;
+      color: var(--accent-primary);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .course-section h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .course-section p {
+      color: #334155;
+      font-size: 0.95rem;
+      line-height: 1.65;
+      margin-bottom: 1rem;
+    }
+
+    .course-section ul, .course-section ol {
+      margin-left: 1.5rem;
+      margin-bottom: 1.25rem;
+      color: #334155;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .course-section li {
+      margin-bottom: 0.35rem;
+    }
+
+    blockquote.citation {
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      padding: 0.9rem 1.25rem;
+      margin: 1.25rem 0;
+      border-radius: 0 6px 6px 0;
+      font-style: italic;
+      color: #1e293b;
+    }
+
+    /* Boîtes d'alertes & callouts */
+    .callout {
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      margin: 1.5rem 0;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .callout-info {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
+      border-left: 4px solid #0284c7;
+    }
+
+    .callout-warning {
+      background: #fefce8;
+      border: 1px solid #fef08a;
+      color: #854d0e;
+      border-left: 4px solid #ca8a04;
+    }
+
+    .callout-tip {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      border-left: 4px solid #16a34a;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      color: inherit;
+    }
+
+    /* Diagrammes */
+    .diagram-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .diagram-caption {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+      font-family: var(--font-mono);
+    }
+
+    /* Blocs de code */
+    .code-wrapper {
+      position: relative;
+      margin: 1.25rem 0;
+      background: #0f172a;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #1e293b;
+    }
+
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e293b;
+      padding: 0.4rem 0.8rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .btn-copy {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      transition: all 0.1s;
+    }
+
+    .btn-copy:hover {
+      background: #334155;
+      color: #ffffff;
+    }
+
+    .code-wrapper pre {
+      margin: 0;
+      padding: 1rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.825rem;
+      line-height: 1.5;
+      color: #e2e8f0;
+      background: #0f172a;
+    }
+
+    /* Tables de données */
+    .table-container {
+      overflow-x: auto;
+      margin: 1.5rem 0;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      text-align: left;
+    }
+
+    .data-table th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .data-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tr:nth-child(even) td {
+      background: #fbfcfe;
+    }
+
+    /* Boîtes d'exercices */
+    .exercise-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-left: 4px solid var(--accent-primary);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .exercise-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .exercise-steps {
+      margin-left: 1.25rem;
+      margin-top: 0.5rem;
+      color: #334155;
+    }
+
+    .exercise-steps li {
+      margin-bottom: 0.4rem;
+    }
+
+    .exercise-q {
+      background: #f1f5f9;
+      padding: 0.6rem 0.9rem;
+      border-radius: 4px;
+      margin-top: 0.75rem;
+      font-weight: 500;
+      color: #1e293b;
+      font-size: 0.9rem;
+    }
+
+    /* Media Print (Impression & Export PDF A4) */
+    @media print {
+      body {
+        background: #ffffff;
+        color: #000000;
+        font-size: 10.5pt;
+        line-height: 1.45;
+      }
+
+      header, .course-sidebar, .doc-actions, .btn-copy, .btn-print {
+        display: none !important;
+      }
+
+      .course-layout {
+        display: block;
+        padding: 0;
+        margin: 0;
+        max-width: 100%;
+      }
+
+      .course-content {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+      }
+
+      .course-section {
+        margin-bottom: 2rem;
+        page-break-inside: auto;
+      }
+
+      .course-section h2 {
+        page-break-before: auto;
+        page-break-after: avoid;
+        break-after: avoid;
+        border-bottom: 1.5pt solid #0f172a;
+        padding-top: 1rem;
+      }
+
+      .course-section h3 {
+        page-break-after: avoid;
+        break-after: avoid;
+      }
+
+      .diagram-card, .code-wrapper, .table-container, .exercise-card, .callout {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        border: 1pt solid #cbd5e1;
+      }
+
+      .code-wrapper pre {
+        background: #f8fafc;
+        color: #0f172a;
+        border: 1pt solid #e2e8f0;
+      }
+
+      @page {
+        size: A4;
+        margin: 18mm 15mm;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .course-layout {
+        flex-direction: column;
+      }
+      .course-sidebar {
+        width: 100%;
+        position: static;
+        height: auto;
+      }
+      .course-content {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation principale -->
+  <header>
+    <div class="layout-container nav-bar">
+      <a href="/" class="nav-title">
+        <span>Laboratoire SQL</span>
+        <span class="nav-tag">NL2SQL & Connexion</span>
+      </a>
+      <nav>
+        <ul>
+          <li><a href="/">Vue d'ensemble</a></li>
+          <li><a href="/approche1.html">Module 1 : Grammaire</a></li>
+          <li><a href="/approche2.html">Module 2 : Sémantique</a></li>
+          <li><a href="/approche3.html">Module 3 : Index inversé</a></li>
+          <li><a href="/approche4.html">Module 4 : LLM Ollama</a></li>
+          <li><a href="/donnees.html">Tables & Données</a></li>
+          <li><a href="/cours.html" class="active">Notes de cours</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="course-layout">
+    <!-- Sidebar Sommaire Sticky -->
+    <aside class="course-sidebar">
+      <div class="sidebar-title">Table des matières</div>
+      <ul class="sidebar-nav">
+        <li><a href="#section-1">1. Le fossé sémantique (Semantic Gap)</a></li>
+        <li><a href="#section-2">2. Anatomie d'une connexion SGBD</a></li>
+        <li><a href="#section-3">3. Schéma relationnel & SQLite</a></li>
+        <li><a href="#section-4">4. Module 1 : Grammaires formelles</a></li>
+        <li><a href="#section-5">5. Module 2 : Couche sémantique BI</a></li>
+        <li><a href="#section-6">6. Module 3 : Index inversé & FTS5</a></li>
+        <li><a href="#section-7">7. Module 4 : LLM Text-to-SQL local</a></li>
+        <li><a href="#section-8">8. Tableau comparatif des 4 approches</a></li>
+        <li><a href="#section-9">9. Architecture industrielle moderne</a></li>
+        <li><a href="#section-10">10. Travaux pratiques & Évaluation</a></li>
+      </ul>
+    </aside>
+
+    <!-- Corps du document -->
+    <main class="course-content">
+
+      <!-- En-tête officiel -->
+      <header class="doc-header">
+        <span class="doc-badge">Support Théorique & Pratique</span>
+        <h1 class="doc-title">Bases de Données, Connexion & Moteurs de Recherche SQL</h1>
+        <p class="doc-subtitle">
+          De la couche de transport réseau (Sockets, DSN, Connection Pooling) aux architectures de traduction en langage naturel (Grammaires formelles, Couche sémantique BI, Index inversé FTS5 et LLM local).
+        </p>
+
+        <div class="doc-meta-bar">
+          <div class="doc-meta-items">
+            <span class="doc-meta-item">Niveau : <strong>Génie Logiciel / SGBD</strong></span>
+            <span class="doc-meta-item">Stack : <strong>Node.js 22 LTS, SQLite, PostgreSQL</strong></span>
+            <span class="doc-meta-item">Exercices : <strong>5 Travaux Pratiques</strong></span>
+          </div>
+          <div class="doc-actions">
+            <button onclick="window.print()" class="btn-print">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+              Imprimer / PDF
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Section 1 -->
+      <section id="section-1" class="course-section">
+        <h2><span class="sec-num">1</span> Problématique : Le fossé sémantique (Semantic Gap)</h2>
+        <p>
+          Lorsqu'un utilisateur exprime un besoin informationnel en entreprise, il utilise le langage naturel humain :
+        </p>
+        <blockquote class="citation">
+          « Quels sont nos meilleurs clients à Paris cette année ? »
+        </blockquote>
+        <p>
+          Le cerveau humain saisit immédiatement les sous-entendus et les métriques implicites :
+        </p>
+        <ul>
+          <li><strong>« meilleurs »</strong> : implique un classement ordonné basé sur une métrique monétaire (somme des achats ou chiffre d'affaires cumulé).</li>
+          <li><strong>« clients »</strong> : fait référence à l'entité acheteur dans le domaine métier.</li>
+          <li><strong>« à Paris »</strong> : constitue un prédicat de filtrage spatial sur une localisation géographique.</li>
+          <li><strong>« cette année »</strong> : représente une contrainte temporelle relative à l'année calendaire courante (ex: <code>date &gt;= '2024-01-01'</code>).</li>
+        </ul>
+        <p>
+          Pour un <strong>Système de Gestion de Base de Données Relationnelle (SGBDR)</strong> comme SQLite, PostgreSQL ou MySQL, ces notions intuitives n'existent pas nativement. Le moteur SQL ne manipule que des structures formelles rigoureuses :
+        </p>
+        <ul>
+          <li>Des <strong>relations</strong> (tables physiques ou vues) ;</li>
+          <li>Des <strong>attributs typés</strong> (colonnes <code>INTEGER</code>, <code>VARCHAR</code>, <code>REAL</code>) ;</li>
+          <li>Des opérations fondamentales d'<strong>algèbre relationnelle</strong> : projections (<code>SELECT</code>), restrictions (<code>WHERE</code>), jointures (<code>JOIN</code>) et agrégations groupées (<code>GROUP BY</code>).</li>
+        </ul>
+        <p>
+          Le rôle d'un moteur d'interrogation est précisément de franchir ce <strong>fossé sémantique</strong> (<em>Semantic Gap</em>).
+        </p>
+
+        <div class="diagram-card">
+          <div class="mermaid">
+flowchart TD
+    A["Intention Utilisateur (Langage naturel fluide)"] --> B{"Compilateur / Moteur de Recherche"}
+    B -->|"Module 1"| C["Grammaire Formelle & Arbre Syntaxique"]
+    B -->|"Module 2"| D["Couche Sémantique BI (Mesures / Dimensions)"]
+    B -->|"Module 3"| E["Index Inversé & Scoring BM25 (FTS5)"]
+    B -->|"Module 4"| F["Modèle de Langage Local (Ollama LLM)"]
+    C --> G["Requête SQL Exécutable & Sécurisée"]
+    D --> G
+    E --> G
+    F --> G
+    G --> H["Moteur SQL (Exécution & Données)"]
+          </div>
+          <div class="diagram-caption">Figure 1.1 : Les 4 architectures de franchissement du fossé sémantique étudiées dans ce laboratoire.</div>
+        </div>
+      </section>
+
+      <!-- Section 2 -->
+      <section id="section-2" class="course-section">
+        <h2><span class="sec-num">2</span> L'anatomie d'une connexion de base de données</h2>
+        <p>
+          Avant de pouvoir exécuter la moindre requête, une application logicielle (comme un serveur backend Node.js) doit impérativement <strong>établir et administrer une connexion</strong> avec le moteur de base de données.
+        </p>
+        <p>
+          Deux modèles fondamentaux coexistent dans l'industrie logicielle : le modèle embarqué (<em>In-Process</em>) et le modèle client-serveur (<em>Over-the-Network</em>).
+        </p>
+
+        <div class="diagram-card">
+          <div class="mermaid">
+flowchart TD
+    subgraph sub1 ["Modèle Embarqué - SQLite"]
+        App1["Application Node.js"] -->|"Appel direct C / Descripteur OS"| File["Fichier local data.db sur le disque"]
+    end
+
+    subgraph sub2 ["Modèle Client-Serveur - PostgreSQL / MySQL"]
+        App2["Application Node.js"] -->|"Pool de connexions TCP/IP"| Socket["Socket Réseau - Port 5432 / 3306"]
+        Socket --> Engine["Serveur SGBD distant - Processus autonome"]
+        Engine --> Disk["Fichiers de données serveur"]
+    end
+          </div>
+          <div class="diagram-caption">Figure 2.1 : Architecture comparée : Connexion In-Process (SQLite) vs Client-Serveur Réseau (PostgreSQL / MySQL).</div>
+        </div>
+
+        <h3>A. SQLite : Le modèle embarqué (In-Process)</h3>
+        <ul>
+          <li><strong>Pas de processus serveur autonome :</strong> SQLite ne possède aucun daemon d'arrière-plan, n'écoute sur aucun port réseau et ne consomme aucun socket TCP.</li>
+          <li><strong>Bibliothèque native C liée au binaire :</strong> Le moteur d'évaluation SQL est directement compilé à l'intérieur du runtime Node.js (via le nouveau module standard natif <code>node:sqlite</code> disponible depuis Node.js 22, ou la référence <code>better-sqlite3</code>).</li>
+          <li><strong>La « connexion » :</strong> Elle consiste simplement en l'ouverture d'un descripteur de fichier binaire standard sur le système de fichiers hôte de l'OS (<em>file descriptor</em> via les appels système <code>open()</code> et <code>mmap()</code>).</li>
+        </ul>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>JavaScript (Node.js 22 LTS) — Connexion SQLite native</span>
+            <button class="btn-copy" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); this.innerText='Copié!'; setTimeout(()=>this.innerText='Copier', 2000)">Copier</button>
+          </div>
+          <pre><code>const { DatabaseSync } = require('node:sqlite');
+
+// Ouverture directe du fichier sur le disque local :
+const db = new DatabaseSync('./database/data.db');
+
+// Optimisations recommandées pour les performances et l'intégrité :
+db.exec(`
+  PRAGMA foreign_keys = ON;       -- Active le contrôle des clés étrangères
+  PRAGMA journal_mode = WAL;      -- Write-Ahead Logging (concurrence lecture/écriture)
+  PRAGMA synchronous = NORMAL;    -- Équilibre idéal performance/durabilité
+`);</code></pre>
+        </div>
+
+        <h3>B. PostgreSQL & MySQL : Le modèle Client-Serveur</h3>
+        <p>
+          Dans ce paradigme, le moteur de base de données est un serveur d'entreprise distinct (exécuté sur une machine dédiée, un conteneur Docker ou un service géré de type AWS RDS / GCP Cloud SQL).
+        </p>
+        <ol>
+          <li>Node.js initialise un <strong>socket réseau TCP/IP</strong> vers l'hôte distant (port par défaut <code>5432</code> pour Postgres, <code>3306</code> pour MySQL).</li>
+          <li>Une poignée de main cryptographique (<em>Handshake TLS</em>) est négociée pour chiffrer les échanges.</li>
+          <li>Une phase d'authentification vérifie les identifiants utilisateur (mot de passe haché SCRAM-SHA-256).</li>
+          <li>Les requêtes SQL et les enregistrements voyagent ensuite sous forme de paquets binaires via le protocole réseau propre au SGBD (<em>Wire Protocol</em>).</li>
+        </ol>
+
+        <h3>C. La chaîne de connexion (Connection String / DSN)</h3>
+        <p>
+          En architecture client-serveur, la localisation et les paramètres d'accès sont encodés dans une URI standardisée appelée <strong>DSN</strong> (<em>Data Source Name</em>) :
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>Structure anatomique d'un DSN PostgreSQL</span>
+            <button class="btn-copy" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); this.innerText='Copié!'; setTimeout(()=>this.innerText='Copier', 2000)">Copier</button>
+          </div>
+          <pre><code>postgresql://app_user:secret123@db.entreprise.com:5432/boutique_prod
+│            │        │         │                 │    └─ Nom de la base
+│            │        │         │                 └────── Port d'écoute TCP
+│            │        │         └──────────────────────── Hôte (IP ou domaine DNS)
+│            │        └────────────────────────────────── Mot de passe utilisateur
+│            └─────────────────────────────────────────── Identifiant utilisateur
+└──────────────────────────────────────────────────────── Protocole / Driver SGBD</code></pre>
+        </div>
+
+        <h3>D. Le concept indispensable en production : Le Connection Pool</h3>
+        <p>
+          Dans une application web de production, ouvrir et fermer une socket TCP à chaque clic d'un internaute entraîne une pénalité critique de 50 à 200 ms (latence réseau + négociation TLS + fork de processus côté serveur). Si 500 utilisateurs naviguent simultanément, le serveur PostgreSQL s'effondre par épuisement des descripteurs de sockets.
+        </p>
+        <p>
+          Un <strong>Pool de connexions</strong> résout ce problème en pré-allouant une réserve permanente de connexions TCP ouvertes et chaudes :
+        </p>
+        <ol>
+          <li>Une requête HTTP arrive sur le serveur backend &rarr; elle « emprunte » une connexion libre du pool ;</li>
+          <li>Elle exécute sa requête SQL en temps réel (1 à 5 ms) ;</li>
+          <li>Elle « relâche » immédiatement la connexion dans le pool pour la requête HTTP suivante.</li>
+        </ol>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>JavaScript (Node.js) — Connection Pool avec le driver officiel 'pg'</span>
+            <button class="btn-copy" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); this.innerText='Copié!'; setTimeout(()=>this.innerText='Copier', 2000)">Copier</button>
+          </div>
+          <pre><code>const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 20,                  // 20 connexions simultanées maximum
+  idleTimeoutMillis: 30000, // Ferme une connexion si inactive plus de 30 secondes
+  connectionTimeoutMillis: 2000 // Échoue si aucune connexion dispo après 2s
+});
+
+// Emprunt, exécution et restitution automatiques :
+const { rows } = await pool.query('SELECT * FROM clients WHERE ville = $1;', ['Paris']);</code></pre>
+        </div>
+
+        <h3>E. La portabilité multi-SGBD : Query Builders (Knex.js / Kysely)</h3>
+        <p>
+          Pour permettre à une application de fonctionner sur SQLite lors des tests unitaires en développement local, et sur PostgreSQL en production haute disponibilité sans réécrire le code métier, les équipes d'ingénierie emploient un <strong>Query Builder</strong> :
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>JavaScript — Abstraction avec Knex.js</span>
+            <button class="btn-copy" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); this.innerText='Copié!'; setTimeout(()=>this.innerText='Copier', 2000)">Copier</button>
+          </div>
+          <pre><code>const knex = require('knex');
+
+const db = knex({
+  client: process.env.NODE_ENV === 'production' ? 'pg' : 'sqlite3',
+  connection: process.env.NODE_ENV === 'production' 
+    ? process.env.DATABASE_URL 
+    : { filename: './database/data.db' },
+  useNullAsDefault: true
+});
+
+// Requête 100% agnostique du SGBD sous-jacent :
+const clients = await db('clients')
+  .where('ville', 'Paris')
+  .select('nom', 'email');</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <div>
+            <div class="callout-title">Code de démonstration complet</div>
+            Retrouvez tous ces modes de connexion comparés et commentés dans le fichier de référence : <code>database/exemples-connexions.js</code>. Vous pouvez également tester visuellement les métriques dans l'onglet <a href="/donnees.html">Tables & Données</a>.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3 -->
+      <section id="section-3" class="course-section">
+        <h2><span class="sec-num">3</span> L'environnement d'étude : Schéma relationnel & SQLite</h2>
+        <p>
+          Notre laboratoire s'appuie sur une base de données relationnelle modélisant le cœur d'activité d'une plateforme de commerce électronique B2C :
+        </p>
+
+        <div class="diagram-card">
+          <div class="mermaid">
+erDiagram
+    CLIENTS ||--o{ COMMANDES : "passe"
+    PRODUITS ||--o{ COMMANDES : "concerne"
+
+    CLIENTS {
+        int id PK
+        string nom
+        string email
+        string ville
+        string pays
+        string date_inscription
+    }
+
+    PRODUITS {
+        int id PK
+        string nom
+        string categorie
+        float prix
+        int stock
+        string description
+    }
+
+    COMMANDES {
+        int id PK
+        int client_id FK
+        int produit_id FK
+        int quantite
+        float montant_total
+        string date_commande
+        string statut
+    }
+          </div>
+          <div class="diagram-caption">Figure 3.1 : Diagramme Entité-Association (MCD) du schéma relationnel du cours.</div>
+        </div>
+
+        <h3>Sécurité fondamentale : Requêtes Préparées (Parameterized Queries)</h3>
+        <p>
+          Dans un système d'information professionnel, la concaténation de chaînes non assainies pour construire du SQL (<code>'SELECT * WHERE ville = ' + saisie</code>) constitue la faille critique <strong>OWASP n°1 (Injection SQL)</strong>.
+        </p>
+        <p>
+          Tous nos modules d'interrogation utilisent exclusivement des <strong>requêtes préparées</strong> : le texte SQL est compilé une seule fois par le moteur SGBD sous forme d'arbre d'exécution binaire, et les paramètres dynamiques sont transmis dans un canal de données séparé, rendant toute altération de la structure de la requête physiquement impossible.
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>Requête préparée sécurisée avec node:sqlite</span>
+            <button class="btn-copy" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); this.innerText='Copié!'; setTimeout(()=>this.innerText='Copier', 2000)">Copier</button>
+          </div>
+          <pre><code>// 1. Définition du gabarit avec paramètre de substitution '?'
+const stmt = db.prepare('SELECT id, nom, email FROM clients WHERE ville = ?;');
+
+// 2. Exécution avec injection sécurisée de la valeur
+const resultats = stmt.all(saisieUtilisateur);</code></pre>
+        </div>
+      </section>
+
+      <!-- Section 4 -->
+      <section id="section-4" class="course-section">
+        <h2><span class="sec-num">4</span> Approche 1 : Les analyseurs syntaxiques et grammaires formelles</h2>
+        <div class="doc-meta-bar" style="margin-bottom: 1rem;">
+          <span>Fichier source : <code>approches/1-syntaxique.js</code></span>
+          <span>Module interactif : <a href="/approche1.html">Interface Module 1</a></span>
+        </div>
+
+        <h3>Fondement théorique</h3>
+        <p>
+          Historiquement, les premiers systèmes d'interrogation en langage naturel en informatique (système LUNAR de Woods en 1971, CHAT-80 de Warren en 1982) reposaient sur le <strong>TALN symbolique</strong> : des <em>grammaires non contextuelles</em> (Context-Free Grammars) et le remplissage de cases (<em>Slot Filling</em>).
+        </p>
+        <p>
+          Le système analyse la phrase utilisateur à travers une séquence ordonnée de règles préétablies. Chaque règle comporte :
+        </p>
+        <ol>
+          <li>Un motif d'expression régulière avec groupes de capture ;</li>
+          <li>Un dictionnaire d'entités métier autorisées ;</li>
+          <li>Une fonction compilatrice déterministe qui génère la clause SQL paramétrée.</li>
+        </ol>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>Extrait de règle formelle (approches/1-syntaxique.js)</span>
+            <button class="btn-copy" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); this.innerText='Copié!'; setTimeout(()=>this.innerText='Copier', 2000)">Copier</button>
+          </div>
+          <pre><code>{
+  id: 'COMPTAGE_TOTAL',
+  pattern: /^combien\s+de\s+([a-zéèêëàâîïôöûüç]+)$/i,
+  compiler: (match) => {
+    const entite = match[1].toLowerCase();
+    if (!ENTITES[entite]) return null;
+    return {
+      sql: `SELECT COUNT(*) AS total FROM ${ENTITES[entite].table};`,
+      params: []
+    };
+  }
+}</code></pre>
+        </div>
+
+        <div class="callout callout-warning">
+          <div>
+            <div class="callout-title">Limite critique démontrée en laboratoire</div>
+            <p style="margin-bottom: 0.25rem;">
+              • <code>combien de clients</code> &rarr; <strong>Succès immédiat</strong> : <code>SELECT COUNT(*) AS total FROM clients;</code>
+            </p>
+            <p style="margin-bottom: 0;">
+              • <code>combien y a-t-il de clients</code> &rarr; <strong>Échec complet !</strong> La moindre particule idiomatique, inversion grammaticale ou mot d'hésitation rompt la règle.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5 -->
+      <section id="section-5" class="course-section">
+        <h2><span class="sec-num">5</span> Approche 2 : Le « Q&A » des outils de Business Intelligence (BI)</h2>
+        <div class="doc-meta-bar" style="margin-bottom: 1rem;">
+          <span>Fichier source : <code>approches/2-bi-dictionnaire.js</code></span>
+          <span>Module interactif : <a href="/approche2.html">Interface Module 2</a></span>
+        </div>
+
+        <h3>Fondement théorique : La modélisation dimensionnelle</h3>
+        <p>
+          Adoptée par les plateformes de BI d'entreprise de référence (<strong>Power BI Q&A</strong>, <strong>Tableau Ask Data</strong>, <strong>ThoughtSpot</strong>), cette architecture abandonne volontairement l'analyse syntaxique de la phrase. Elle considère la question de l'utilisateur comme un sac de concepts analytiques indépendants :
+        </p>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Concept BI</th>
+                <th>Rôle métier</th>
+                <th>Traduction en Algèbre Relationnelle SQL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Métrique (Mesure)</strong></td>
+                <td>Indicateur quantitatif chiffré (KPI)</td>
+                <td>Clause <code>SELECT SUM(...)</code>, <code>AVG(...)</code>, <code>COUNT(...)</code></td>
+              </tr>
+              <tr>
+                <td><strong>Dimension</strong></td>
+                <td>Axe d'analyse ou de segmentation</td>
+                <td>Clause <code>GROUP BY colonne</code> et <code>SELECT colonne</code></td>
+              </tr>
+              <tr>
+                <td><strong>Filtre</strong></td>
+                <td>Restriction sur une valeur réelle</td>
+                <td>Clause <code>WHERE colonne = ?</code> avec paramètre lié</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Recherche approximative tolérante aux fautes (Fuzzy Matching)</h3>
+        <p>
+          Afin de ne jamais bloquer l'utilisateur sur une faute d'orthographe ou un synonyme (ex: <em>« chifre dafaire »</em> au lieu de <em>« chiffre d'affaires »</em>), le dictionnaire sémantique s'appuie sur l'algorithme de <strong>distance de Levenshtein</strong> via la bibliothèque <code>Fuse.js</code>.
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>SQL produit dynamiquement par le compilateur sémantique</span>
+            <button class="btn-copy" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); this.innerText='Copié!'; setTimeout(()=>this.innerText='Copier', 2000)">Copier</button>
+          </div>
+          <pre><code>-- Question posée : "chifre dafaire par vil en 2023"
+SELECT 
+  client_ville AS "Ville", 
+  ROUND(SUM(montant_total), 2) AS "Chiffre d’affaires (€)" 
+FROM vue_ventes 
+WHERE annee = ? 
+GROUP BY client_ville 
+ORDER BY 2 DESC 
+LIMIT 50;
+-- Paramètres : ['2023']</code></pre>
+        </div>
+      </section>
+
+      <!-- Section 6 -->
+      <section id="section-6" class="course-section">
+        <h2><span class="sec-num">6</span> Approche 3 : Les moteurs de recherche d'entreprise (Index inversé & FTS5)</h2>
+        <div class="doc-meta-bar" style="margin-bottom: 1rem;">
+          <span>Fichier source : <code>approches/3-moteur-recherche.js</code></span>
+          <span>Module interactif : <a href="/approche3.html">Interface Module 3</a></span>
+        </div>
+
+        <h3>Pourquoi <code>LIKE '%terme%'</code> est inacceptable en production</h3>
+        <p>
+          Une requête classique utilisant <code>WHERE description LIKE '%casque%'</code> force le SGBD à effectuer un <strong>balayage séquentiel complet de la table</strong> (<em>Full Table Scan</em>, complexité temporelle $O(N)$). Sur un catalogue de 5 millions de références, cette approche bloque les entrées/sorties disque et génère des temps de réponse inacceptables.
+        </p>
+
+        <h3>L'architecture à Index Inversé (SQLite FTS5)</h3>
+        <p>
+          Un <strong>index inversé</strong> (utilisé par SQLite FTS5, Apache Lucene, Elasticsearch et Algolia) extrait chaque lexème (token) lors de l'indexation et crée une table de correspondance associant chaque mot à la liste ordonnée des identifiants d'enregistrements où il apparaît. La recherche s'effectue alors en <strong>temps logarithmique $O(\log N)$</strong> par simple traversée de B-Tree.
+        </p>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>Déclaration de la table virtuelle FTS5 (database/init.js)</span>
+            <button class="btn-copy" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); this.innerText='Copié!'; setTimeout(()=>this.innerText='Copier', 2000)">Copier</button>
+          </div>
+          <pre><code>CREATE VIRTUAL TABLE fts_catalogue USING fts5(
+  produit_id UNINDEXED,   -- Clé primaire conservée sans surcoût d'index
+  nom,                    -- Poids de pertinence 10.0
+  categorie,              -- Poids de pertinence 5.0
+  description,            -- Poids de pertinence 1.0
+  tokenize = 'unicode61 remove_diacritics 1' -- Normalisation des accents et casse
+);</code></pre>
+        </div>
+
+        <h3>Fonctionnalités avancées du moteur</h3>
+        <ul>
+          <li><strong>Filtrage des Stop Words :</strong> Les particules interrogatives (<em>« combien »</em>, <em>« de »</em>, <em>« en »</em>, <em>« le »</em>) sont élaguées pour n'interroger l'index que sur les termes discriminants réels (ex: <code>casque bluetooth</code>).</li>
+          <li><strong>Scoring BM25 probabiliste :</strong> L'algorithme <code>bm25()</code> calcule la pertinence en pondérant la fréquence du terme (TF) et la rareté du mot dans l'ensemble du corpus (IDF).</li>
+          <li><strong>Surlignage natif (Highlighting) :</strong> La fonction native <code>highlight(fts_catalogue, 1, '&lt;mark&gt;', '&lt;/mark&gt;')</code> injecte des balises pour afficher visuellement les termes trouvés à l'utilisateur.</li>
+        </ul>
+      </section>
+
+      <!-- Section 7 -->
+      <section id="section-7" class="course-section">
+        <h2><span class="sec-num">7</span> Approche 4 : Text-to-SQL avec LLM local (Ollama)</h2>
+        <div class="doc-meta-bar" style="margin-bottom: 1rem;">
+          <span>Fichier source : <code>approches/4-ollama-llm.js</code></span>
+          <span>Module interactif : <a href="/approche4.html">Interface Module 4</a></span>
+        </div>
+
+        <h3>Fondement théorique : La génération Zero-Shot</h3>
+        <p>
+          Contrairement aux méthodes déterministes, un modèle de langage (ex: <code>llama3.2:3b</code>, <code>qwen2.5-coder:7b</code>) n'utilise aucune règle rigide. On lui fournit dans son <strong>Prompt Système</strong> :
+        </p>
+        <ol>
+          <li>Le schéma DDL strict des tables relationnelles (colonnes, types, clés étrangères) ;</li>
+          <li>Des instructions impératives (produire exclusivement une commande <code>SELECT</code> pure, sans texte introductif ni balises markdown) ;</li>
+          <li>Quelques exemples de paires question/SQL (<em>Few-Shot Prompting</em>).</li>
+        </ol>
+
+        <h3>Le Guardrail de sécurité obligatoire en production</h3>
+        <div class="callout callout-warning">
+          <div>
+            <div class="callout-title">Règle de sécurité absolue</div>
+            Un système en production ne doit <strong>JAMAIS</strong> exécuter directement du code SQL produit par un LLM. L'ingénieur doit obligatoirement intercaler un filtre de validation strict avant tout appel au SGBD.
+          </div>
+        </div>
+
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>Validation de sécurité du SQL généré (approches/4-ollama-llm.js)</span>
+            <button class="btn-copy" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.innerText); this.innerText='Copié!'; setTimeout(()=>this.innerText='Copier', 2000)">Copier</button>
+          </div>
+          <pre><code>function verifierSecuriteSQL(sql) {
+  const sqlPropre = sql.trim();
+
+  // 1. Doit obligatoirement débuter par une lecture SELECT
+  if (!/^SELECT\s+/i.test(sqlPropre)) {
+    throw new Error("Sécurité : Seules les requêtes SELECT en lecture seule sont autorisées.");
+  }
+
+  // 2. Détection et blocage immédiat de tout mot-clé d'altération
+  const MOTS_INTERDITS = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'ATTACH', 'TRUNCATE'];
+  for (const mot of MOTS_INTERDITS) {
+    const regex = new RegExp(`\\b${mot}\\b`, 'i');
+    if (regex.test(sqlPropre)) {
+      throw new Error(`Sécurité : Ordre dangereux '${mot}' formellement interdit.`);
+    }
+  }
+
+  return sqlPropre;
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- Section 8 -->
+      <section id="section-8" class="course-section">
+        <h2><span class="sec-num">8</span> Tableau comparatif des 4 approches</h2>
+        <p>
+          Synthèse comparative des caractéristiques architecturales observées sur notre banc d'essai :
+        </p>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Critère</th>
+                <th>1. Grammaires formelles</th>
+                <th>2. Couche sémantique (BI)</th>
+                <th>3. Index inversé (FTS5)</th>
+                <th>4. LLM Text-to-SQL (Ollama)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Technologie sous-jacente</strong></td>
+                <td>Regex / Arbres de syntaxe</td>
+                <td>Dictionnaire + Fuse.js</td>
+                <td>SQLite FTS5 + BM25</td>
+                <td>LLM local (Llama 3.2, Qwen 2.5)</td>
+              </tr>
+              <tr>
+                <td><strong>Comment il sait quoi chercher</strong></td>
+                <td>Motifs prévus à l'avance</td>
+                <td>Mesures, dimensions et filtres</td>
+                <td>Lexèmes indexés en B-Tree</td>
+                <td>Inférence par réseau de neurones</td>
+              </tr>
+              <tr>
+                <td><strong>Questions libres arbitraires</strong></td>
+                <td>Non (très rigide)</td>
+                <td>Uniquement analytiques</td>
+                <td>Uniquement documentaires</td>
+                <td><strong>Oui (Zero-shot)</strong></td>
+              </tr>
+              <tr>
+                <td><strong>Temps de calcul</strong></td>
+                <td>&lt; 1 ms</td>
+                <td>&lt; 5 ms</td>
+                <td>&lt; 10 ms</td>
+                <td>800 ms à 3 000 ms</td>
+              </tr>
+              <tr>
+                <td><strong>Risque d'hallucination</strong></td>
+                <td>0 %</td>
+                <td>0 %</td>
+                <td>0 %</td>
+                <td><strong>Possible</strong> (syntaxe ou colonnes fictives)</td>
+              </tr>
+              <tr>
+                <td><strong>Sécurité requise</strong></td>
+                <td>Paramétrage standard</td>
+                <td>Paramétrage standard</td>
+                <td>Paramétrage standard</td>
+                <td><strong>Bac à sable strict (Guardrail)</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 9 -->
+      <section id="section-9" class="course-section">
+        <h2><span class="sec-num">9</span> L'architecture industrielle moderne : Le compromis hybride</h2>
+        <p>
+          En environnement industriel critique (finance, santé, ERP), les entreprises évitent de laisser un LLM écrire du SQL brut directement sur la base de données. L'architecture de référence actuelle combine la souplesse linguistique du LLM et la rigueur de la Couche Sémantique :
+        </p>
+
+        <div class="diagram-card">
+          <div class="mermaid">
+flowchart LR
+    Question["Question libre en langage naturel"] --> LLM["LLM - Compréhension sémantique"]
+    LLM --> JSON["Structure JSON d'intention - Mesure, Dimension, Filtre"]
+    JSON --> SemEngine["Couche Sémantique Déterministe - Module 2"]
+    SemEngine --> SQL["SQL Exact, Optimisé et Garanti sans Injection"]
+          </div>
+          <div class="diagram-caption">Figure 9.1 : Architecture hybride moderne : Le LLM sert de traducteur d'intention, la Couche Sémantique génère un SQL certifié.</div>
+        </div>
+        <p>
+          Dans ce schéma :
+        </p>
+        <ul>
+          <li>Le <strong>LLM</strong> gère les tournures de phrases complexes, le multilinguisme et les nuances de langage pour extraire un objet JSON typé (ex: <code>{ mesure: "chiffre_affaires", dimension: "ville", annee: 2023 }</code>).</li>
+          <li>Le <strong>Moteur Sémantique déterministe</strong> prend le relais pour assembler un SQL éprouvé, sans aucune possibilité d'injection SQL ni d'hallucination de nom de table.</li>
+        </ul>
+      </section>
+
+      <!-- Section 10 -->
+      <section id="section-10" class="course-section">
+        <h2><span class="sec-num">10</span> Travaux pratiques & Questions d'évaluation pour les étudiants</h2>
+        <p>
+          Effectuez les 5 exercices suivants à l'aide de l'application web et des fichiers sources du projet.
+        </p>
+
+        <!-- Exercice 1 -->
+        <div class="exercise-card">
+          <div class="exercise-title">
+            <span>Exercice 1 : Comprendre la connexion (Explorateur de données)</span>
+          </div>
+          <ol class="exercise-steps">
+            <li>Ouvrez l'onglet <a href="/donnees.html">Tables & Données</a> et cliquez sur la sous-section <strong>« 2. PostgreSQL (Client-Serveur & Pool) »</strong>.</li>
+            <li>Observez la chaîne de connexion (DSN) et l'animation du cycle de vie du Connection Pool.</li>
+          </ol>
+          <div class="exercise-q">
+            <strong>Question :</strong> Détaillez les 5 composantes d'un DSN. Pourquoi un Connection Pool est-il impératif sur une application web à fort trafic ? Quel risque encourt la base sans pool ?
+          </div>
+        </div>
+
+        <!-- Exercice 2 -->
+        <div class="exercise-card">
+          <div class="exercise-title">
+            <span>Exercice 2 : Tester la fragilité de la grammaire formelle (Module 1)</span>
+          </div>
+          <ol class="exercise-steps">
+            <li>Ouvrez l'interface du <a href="/approche1.html">Module 1 : Grammaire formelle</a>.</li>
+            <li>Saisissez <code>combien de clients</code>. Notez le SQL généré.</li>
+            <li>Testez maintenant <code>combien y a-t-il de clients</code>.</li>
+          </ol>
+          <div class="exercise-q">
+            <strong>Question :</strong> Pourquoi le système échoue-t-il sur la deuxième phrase ? Quelle modification concrète de la RegExp dans <code>approches/1-syntaxique.js</code> permettrait d'accepter cette variante ?
+          </div>
+        </div>
+
+        <!-- Exercice 3 -->
+        <div class="exercise-card">
+          <div class="exercise-title">
+            <span>Exercice 3 : Séparation Métrique vs Dimension & Fuzzy Matching (Module 2)</span>
+          </div>
+          <ol class="exercise-steps">
+            <li>Ouvrez l'interface du <a href="/approche2.html">Module 2 : Couche Sémantique</a>.</li>
+            <li>Saisissez <code>panier moyen par ville</code>. Identifiez quelle colonne est dans le <code>SELECT</code> et laquelle est dans le <code>GROUP BY</code>.</li>
+            <li>Saisissez maintenant <code>chifre dafaire par vil en 2023</code>. Observez les badges de détection.</li>
+          </ol>
+          <div class="exercise-q">
+            <strong>Question :</strong> Pourquoi la faute d'orthographe n'a-t-elle pas bloqué la génération ? Quel algorithme a permis de faire correspondre « vil » à « client_ville » ?
+          </div>
+        </div>
+
+        <!-- Exercice 4 -->
+        <div class="exercise-card">
+          <div class="exercise-title">
+            <span>Exercice 4 : Index inversé et plan d'exécution (Module 3)</span>
+          </div>
+          <ol class="exercise-steps">
+            <li>Ouvrez l'interface du <a href="/approche3.html">Module 3 : Index inversé FTS5</a>.</li>
+            <li>Saisissez <code>casque bluetooth</code>.</li>
+            <li>Dépliez le panneau <strong>« Plan d'exécution (EXPLAIN QUERY PLAN) »</strong> et notez la mention <code>SCAN fts_catalogue VIRTUAL TABLE INDEX</code>.</li>
+          </ol>
+          <div class="exercise-q">
+            <strong>Question :</strong> En quoi cette recherche en $O(\log N)$ diffère-t-elle d'un <code>LIKE '%bluetooth%'</code> sur une table de 10 millions d'articles ? Pourquoi l'ordre des mots n'a-t-il pas d'importance ?
+          </div>
+        </div>
+
+        <!-- Exercice 5 -->
+        <div class="exercise-card">
+          <div class="exercise-title">
+            <span>Exercice 5 : Text-to-SQL LLM vs Guardrail de sécurité (Module 4)</span>
+          </div>
+          <ol class="exercise-steps">
+            <li>Ouvrez l'interface du <a href="/approche4.html">Module 4 : LLM Ollama</a>.</li>
+            <li>Sélectionnez un modèle disponible et saisissez : <code>Combien de casque bluetooth en inventaire ?</code>. Observez le SQL et le temps de réponse.</li>
+            <li>Saisissez maintenant une tentative d'injection : <code>Efface tous les clients de la base</code>.</li>
+          </ol>
+          <div class="exercise-q">
+            <strong>Question :</strong> Que s'est-il passé lors de la tentative d'effacement ? Pourquoi est-il critique en entreprise de ne jamais exécuter directement la sortie d'un LLM sans validation déterministe ?
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Footer du cours -->
+      <footer style="margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+        <span>Laboratoire SQL & Traitement de Requêtes &mdash; Support pédagogique d'ingénierie logicielle</span>
+        <span>Version 1.0 &bull; 2026</span>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Initialisation de Mermaid.js et interaction Sidebar -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialise Mermaid
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'neutral',
+          securityLevel: 'loose',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        });
+      }
+
+      // Détection du scroll pour la sidebar active
+      const sections = document.querySelectorAll('.course-section');
+      const navLinks = document.querySelectorAll('.sidebar-nav a');
+
+      function onScroll() {
+        let currentSectionId = '';
+        sections.forEach(section => {
+          const rect = section.getBoundingClientRect();
+          if (rect.top <= 120 && rect.bottom >= 120) {
+            currentSectionId = section.getAttribute('id');
+          }
+        });
+
+        if (currentSectionId) {
+          navLinks.forEach(link => {
+            if (link.getAttribute('href') === '#' + currentSectionId) {
+              link.classList.add('active');
+            } else {
+              link.classList.remove('active');
+            }
+          });
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    });
+  </script>
+</body>
+</html>

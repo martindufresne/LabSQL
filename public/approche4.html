@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4 : Text-to-SQL avec LLM local (Ollama)</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <header>
+    <div class="layout-container nav-bar">
+      <a href="/" class="nav-title">
+        <span>Laboratoire SQL</span>
+        <span class="nav-tag">Module 4</span>
+      </a>
+      <nav>
+        <ul>
+          <li><a href="/">Vue d'ensemble</a></li>
+          <li><a href="/approche1.html">Module 1 : Grammaire formelle</a></li>
+          <li><a href="/approche2.html">Module 2 : Couche sémantique</a></li>
+          <li><a href="/approche3.html">Module 3 : Index inversé</a></li>
+          <li><a href="/approche4.html" class="active">Module 4 : LLM Text-to-SQL</a></li>
+          <li><a href="/donnees.html">Tables & Données</a></li>
+          <li><a href="/cours.html">Notes de cours</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="layout-container">
+    <div class="page-header">
+      <h1 class="page-title">Module 4 : Text-to-SQL avec LLM local (Ollama)</h1>
+      <p class="page-desc">
+        Génération zero-shot de code SQL à l'aide d'un modèle de langage exécuté en local. Le schéma relationnel est injecté dans le prompt et un bac à sable sécurise l'exécution.
+      </p>
+    </div>
+
+    <!-- Console de commande -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Requête en langage naturel libre</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <label for="model-select" style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">Modèle Ollama :</label>
+          <select id="model-select" style="padding: 0.25rem 0.5rem; border-radius: 3px; border: 1px solid var(--border-dark); font-family: var(--font-mono); font-size: 0.8rem;">
+            <option value="">Chargement des modèles...</option>
+          </select>
+        </div>
+      </div>
+
+      <form id="search-form">
+        <div class="form-row">
+          <input type="text" id="question-input" class="input-text" placeholder="Posez n'importe quelle question sur les clients, produits ou commandes..." autocomplete="off">
+          <button type="submit" class="btn-primary" id="btn-submit">Générer & Exécuter</button>
+        </div>
+      </form>
+
+      <div class="samples-bar">
+        <span class="samples-label">Jeux d'essai Text-to-SQL :</span>
+        <button type="button" class="sample-btn" onclick="setQuery('Combien de casque bluetooth en inventaire ?')">Combien de casque bluetooth en inventaire ?</button>
+        <button type="button" class="sample-btn" onclick="setQuery('Quels sont les clients de Paris ayant commandé un article ?')">Clients de Paris avec commande</button>
+        <button type="button" class="sample-btn" onclick="setQuery('Total du chiffre d affaires en 2023')">Total chiffre d'affaires 2023</button>
+        <button type="button" class="sample-btn" onclick="setQuery('Produits avec un prix supérieur à 150 euros triés par prix décroissant')">Produits prix > 150 €</button>
+      </div>
+
+      <div class="samples-bar" style="margin-top: 0.4rem;">
+        <span class="samples-label">Test de sécurité (Guardrail) :</span>
+        <button type="button" class="sample-btn sample-invalid" onclick="setQuery('Efface tous les clients de la base')">Efface tous les clients (Rejet)</button>
+        <button type="button" class="sample-btn sample-invalid" onclick="setQuery('Supprime la table produits avec DROP TABLE')">DROP TABLE produits (Rejet)</button>
+      </div>
+    </div>
+
+    <!-- Zone de sortie -->
+    <div id="output-container" style="display: none;">
+      
+      <!-- Journal de trace -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Journal d'inférence et d'exécution</span>
+          <span id="latency-tag" class="tag tag-neutral"></span>
+        </div>
+        <div id="trace-log" class="trace-log"></div>
+      </div>
+
+      <!-- Prompt système inspectable -->
+      <div class="panel">
+        <div class="panel-header" style="cursor: pointer;" onclick="togglePrompt()">
+          <span class="panel-title">Prompt transmis à Ollama (Injection du schéma DDL)</span>
+          <span style="font-size: 0.75rem; color: var(--accent-primary); font-family: var(--font-mono);">[Afficher / Masquer]</span>
+        </div>
+        <div id="prompt-box" style="display: none;">
+          <div class="code-box" style="background: #1e293b;">
+            <pre><code id="prompt-content"></code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- SQL généré par le LLM -->
+      <div class="panel" id="sql-panel">
+        <div class="panel-header">
+          <span class="panel-title">Requête SQL générée par le modèle</span>
+          <span id="model-tag" class="tag tag-metric"></span>
+        </div>
+        <div class="code-box">
+          <pre><code id="sql-code"></code></pre>
+        </div>
+      </div>
+
+      <!-- Plan d'exécution SQLite -->
+      <div class="panel" id="plan-panel">
+        <div class="panel-header">
+          <span class="panel-title">Plan d'exécution moteur (EXPLAIN QUERY PLAN)</span>
+        </div>
+        <div class="table-wrapper">
+          <table id="plan-table">
+            <thead>
+              <tr>
+                <th style="width: 80px;">Étape</th>
+                <th>Opération interne SQLite</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Données résultantes -->
+      <div class="panel" id="data-panel">
+        <div class="panel-header">
+          <span class="panel-title">Données retournées par la requête</span>
+          <span id="rows-count" style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);"></span>
+        </div>
+        <div class="table-wrapper">
+          <table id="results-table">
+            <thead id="table-head"></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Erreur (syntaxe SQL ou refus sécurité) -->
+      <div class="panel" id="error-panel" style="display: none; border-color: #fecaca;">
+        <div class="panel-header" style="border-bottom-color: #fecaca;">
+          <span class="panel-title" style="color: var(--accent-danger);">Échec d'exécution de la requête</span>
+        </div>
+        <div id="error-desc" class="msg-box msg-error" style="margin-bottom: 0.5rem;"></div>
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">
+          Dans une architecture Text-to-SQL par LLM, l'échec survient si le modèle hallucine un nom de colonne inexistant, commet une erreur de syntaxe SQL, ou si la commande est bloquée par le bac à sable de sécurité.
+        </p>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    <div class="layout-container">
+      Module 4 — Text-to-SQL génératif avec Ollama
+    </div>
+  </footer>
+
+  <script>
+    const form = document.getElementById('search-form');
+    const input = document.getElementById('question-input');
+    const modelSelect = document.getElementById('model-select');
+    const btnSubmit = document.getElementById('btn-submit');
+
+    // Charger la liste des modèles Ollama locaux
+    fetch('/api/ollama/modeles')
+      .then(r => r.json())
+      .then(data => {
+        modelSelect.innerHTML = '';
+        if (data.disponible && data.modeles.length > 0) {
+          data.modeles.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            // Sélectionner llama3.2:3b par défaut si présent, ou llama3.1:8b
+            if (m.includes('llama3.2:3b')) opt.selected = true;
+            modelSelect.appendChild(opt);
+          });
+        } else {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Ollama non détecté (Lancez ollama serve)';
+          modelSelect.appendChild(opt);
+        }
+      })
+      .catch(() => {
+        modelSelect.innerHTML = '<option value="">Erreur connexion Ollama</option>';
+      });
+
+    function setQuery(txt) {
+      input.value = txt;
+      runTextToSql();
+    }
+
+    function togglePrompt() {
+      const box = document.getElementById('prompt-box');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      runTextToSql();
+    });
+
+    async function runTextToSql() {
+      const q = input.value.trim();
+      if (!q) return;
+
+      const outputContainer = document.getElementById('output-container');
+      const sqlPanel = document.getElementById('sql-panel');
+      const planPanel = document.getElementById('plan-panel');
+      const dataPanel = document.getElementById('data-panel');
+      const errorPanel = document.getElementById('error-panel');
+
+      outputContainer.style.display = 'block';
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Génération en cours...';
+
+      try {
+        const res = await fetch('/api/approche4', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q, modele: modelSelect.value })
+        });
+        const data = await res.json();
+
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Générer & Exécuter';
+
+        // 1. Trace
+        const traceLog = document.getElementById('trace-log');
+        traceLog.innerHTML = '';
+        if (data.etapes) {
+          data.etapes.forEach(s => {
+            const row = document.createElement('div');
+            row.className = 'trace-item';
+            row.innerHTML = `<span class="trace-step">${s.etape}</span><span class="trace-content">${s.detail}</span>`;
+            traceLog.appendChild(row);
+          });
+        }
+
+        // Latence
+        if (data.tempsInferenceMs) {
+          document.getElementById('latency-tag').textContent = `Inférence : ${data.tempsInferenceMs} ms`;
+        }
+
+        // Prompt injecté
+        document.getElementById('prompt-content').textContent = data.promptInjecte || '';
+
+        if (data.succes) {
+          errorPanel.style.display = 'none';
+          sqlPanel.style.display = 'block';
+          planPanel.style.display = 'block';
+          dataPanel.style.display = 'block';
+
+          document.getElementById('model-tag').textContent = `Modèle : ${data.modele}`;
+          document.getElementById('sql-code').textContent = data.sql;
+
+          // Plan
+          const planTbody = document.querySelector('#plan-table tbody');
+          planTbody.innerHTML = '';
+          if (data.planExecution) {
+            data.planExecution.forEach(p => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td><code>#${p.id}</code></td><td><code>${p.detail}</code></td>`;
+              planTbody.appendChild(tr);
+            });
+          }
+
+          // Table
+          const thead = document.getElementById('table-head');
+          const tbody = document.getElementById('table-body');
+          thead.innerHTML = '';
+          tbody.innerHTML = '';
+
+          document.getElementById('rows-count').textContent = `${data.totalLignes} ligne(s)`;
+
+          if (data.resultats && data.resultats.length > 0) {
+            const cols = Object.keys(data.resultats[0]);
+            const trHead = document.createElement('tr');
+            cols.forEach(c => {
+              const th = document.createElement('th');
+              th.textContent = c;
+              trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+
+            data.resultats.forEach(row => {
+              const tr = document.createElement('tr');
+              cols.forEach(c => {
+                const td = document.createElement('td');
+                td.textContent = row[c] !== null ? row[c] : 'NULL';
+                tr.appendChild(td);
+              });
+              tbody.appendChild(tr);
+            });
+          } else {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">Aucune donnée retournée par la requête.</td></tr>';
+          }
+
+        } else {
+          // Échec (syntaxe ou sécurité)
+          sqlPanel.style.display = 'none';
+          planPanel.style.display = 'none';
+          dataPanel.style.display = 'none';
+          errorPanel.style.display = 'block';
+
+          document.getElementById('error-desc').textContent = data.erreur;
+        }
+
+      } catch (err) {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Générer & Exécuter';
+        alert('Erreur réseau : ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

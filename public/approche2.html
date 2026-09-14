@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 2 : Couche sémantique et recherche floue</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <header>
+    <div class="layout-container nav-bar">
+      <a href="/" class="nav-title">
+        <span>Laboratoire SQL</span>
+        <span class="nav-tag">Module 2</span>
+      </a>
+      <nav>
+        <ul>
+          <li><a href="/">Vue d'ensemble</a></li>
+          <li><a href="/approche1.html">Module 1 : Grammaire formelle</a></li>
+          <li><a href="/approche2.html" class="active">Module 2 : Couche sémantique</a></li>
+          <li><a href="/approche3.html">Module 3 : Index inversé</a></li>
+          <li><a href="/approche4.html">Module 4 : LLM Text-to-SQL</a></li>
+          <li><a href="/donnees.html">Tables & Données</a></li>
+          <li><a href="/cours.html">Notes de cours</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="layout-container">
+    <div class="page-header">
+      <h1 class="page-title">Module 2 : Couche sémantique & Q&A décisionnel (Tableau / Power BI)</h1>
+      <p class="page-desc">
+        Extraction d'intention analytique : la saisie est projetée sur un catalogue de mesures (agrégations), de dimensions (regroupements) et de filtres avec tolérance aux fautes (Fuse.js).
+      </p>
+    </div>
+
+    <!-- Console de saisie -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Saisie en langage naturel</span>
+      </div>
+
+      <form id="search-form">
+        <div class="form-row">
+          <input type="text" id="phrase-input" class="input-text" placeholder="Entrez une question analytique (ex: ventes par categorie en 2023)..." autocomplete="off">
+          <button type="submit" class="btn-primary">Compiler en SQL</button>
+        </div>
+      </form>
+
+      <div class="samples-bar">
+        <span class="samples-label">Formulations standard :</span>
+        <button type="button" class="sample-btn" onclick="setQuery('ventes par categorie en 2023')">ventes par categorie en 2023</button>
+        <button type="button" class="sample-btn" onclick="setQuery('panier moyen par ville')">panier moyen par ville</button>
+        <button type="button" class="sample-btn" onclick="setQuery('commandes par statut')">commandes par statut</button>
+        <button type="button" class="sample-btn" onclick="setQuery('quantite par produit')">quantite par produit</button>
+        <button type="button" class="sample-btn" onclick="setQuery('chiffre daffaires par pays')">chiffre d'affaires par pays</button>
+      </div>
+
+      <div class="samples-bar" style="margin-top: 0.4rem;">
+        <span class="samples-label">Fautes de frappe (Distance de Levenshtein) :</span>
+        <button type="button" class="sample-btn" style="border-color: #fde68a; background: #fefce8; color: #854d0e;" onclick="setQuery('chifre dafaire par vil en 2023')">chifre dafaire par vil en 2023</button>
+        <button type="button" class="sample-btn" style="border-color: #fde68a; background: #fefce8; color: #854d0e;" onclick="setQuery('achats par cliént a Paris')">achats par cliént a Paris</button>
+      </div>
+    </div>
+
+    <!-- Zone de sortie -->
+    <div id="output-container" style="display: none;">
+      
+      <!-- Décomposition des tokens reconnus -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Tokens extraits du catalogue sémantique</span>
+        </div>
+        <div id="semantic-tokens" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+      </div>
+
+      <!-- Trace du compilateur -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Journal de compilation de la requête</span>
+        </div>
+        <div id="trace-log" class="trace-log"></div>
+      </div>
+
+      <!-- SQL généré -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Requête compilée sur vue dénormalisée (vue_ventes)</span>
+          <span class="tag tag-neutral">SQL ANSI</span>
+        </div>
+        <div class="code-box">
+          <pre><code id="sql-code"></code></pre>
+        </div>
+        <div class="code-meta">
+          Paramètres liés : <span id="sql-params" style="font-weight: 600;"></span>
+        </div>
+      </div>
+
+      <!-- Données -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Résultats analytiques</span>
+          <span id="rows-count" style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);"></span>
+        </div>
+        <div class="table-wrapper">
+          <table id="results-table">
+            <thead id="table-head"></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    <div class="layout-container">
+      Module 2 — Modélisation dimensionnelle et compilation sémantique
+    </div>
+  </footer>
+
+  <script>
+    const form = document.getElementById('search-form');
+    const input = document.getElementById('phrase-input');
+
+    function setQuery(txt) {
+      input.value = txt;
+      runCompiler();
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      runCompiler();
+    });
+
+    async function runCompiler() {
+      const p = input.value.trim();
+      if (!p) return;
+
+      const outputContainer = document.getElementById('output-container');
+      outputContainer.style.display = 'block';
+
+      try {
+        const res = await fetch('/api/approche2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phrase: p })
+        });
+        const data = await res.json();
+
+        // 1. Tokens extraits
+        const tokensContainer = document.getElementById('semantic-tokens');
+        tokensContainer.innerHTML = '';
+        if (data.reformulation) {
+          if (data.reformulation.afficher.length > 0) {
+            data.reformulation.afficher.forEach(m => {
+              tokensContainer.innerHTML += `<span class="tag tag-metric">MESURE : ${m}</span>`;
+            });
+          }
+          if (data.reformulation.ventilerPar.length > 0) {
+            data.reformulation.ventilerPar.forEach(d => {
+              tokensContainer.innerHTML += `<span class="tag tag-dim">DIMENSION : ${d}</span>`;
+            });
+          }
+          if (data.reformulation.filtrerSur.length > 0) {
+            data.reformulation.filtrerSur.forEach(f => {
+              tokensContainer.innerHTML += `<span class="tag tag-filter">FILTRE : ${f}</span>`;
+            });
+          }
+        }
+
+        // 2. Trace
+        const traceLog = document.getElementById('trace-log');
+        traceLog.innerHTML = '';
+        if (data.etapes) {
+          data.etapes.forEach(s => {
+            const row = document.createElement('div');
+            row.className = 'trace-item';
+            row.innerHTML = `<span class="trace-step">${s.etape}</span><span class="trace-content">${s.detail}</span>`;
+            traceLog.appendChild(row);
+          });
+        }
+
+        // 3. SQL & Params
+        document.getElementById('sql-code').textContent = data.sql;
+        document.getElementById('sql-params').textContent = JSON.stringify(data.params);
+
+        // 4. Données
+        const thead = document.getElementById('table-head');
+        const tbody = document.getElementById('table-body');
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+
+        document.getElementById('rows-count').textContent = `${data.totalLignes} ligne(s)`;
+
+        if (data.resultats && data.resultats.length > 0) {
+          const cols = Object.keys(data.resultats[0]);
+          const trHead = document.createElement('tr');
+          cols.forEach(c => {
+            const th = document.createElement('th');
+            th.textContent = c;
+            trHead.appendChild(th);
+          });
+          thead.appendChild(trHead);
+
+          data.resultats.forEach(row => {
+            const tr = document.createElement('tr');
+            cols.forEach(c => {
+              const td = document.createElement('td');
+              td.textContent = row[c] !== null ? row[c] : 'NULL';
+              tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+          });
+        } else {
+          tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">Aucun résultat retourné.</td></tr>';
+        }
+
+      } catch (err) {
+        alert('Erreur réseau : ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3 : Recherche plein texte et index inversé</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <header>
+    <div class="layout-container nav-bar">
+      <a href="/" class="nav-title">
+        <span>Laboratoire SQL</span>
+        <span class="nav-tag">Module 3</span>
+      </a>
+      <nav>
+        <ul>
+          <li><a href="/">Vue d'ensemble</a></li>
+          <li><a href="/approche1.html">Module 1 : Grammaire formelle</a></li>
+          <li><a href="/approche2.html">Module 2 : Couche sémantique</a></li>
+          <li><a href="/approche3.html" class="active">Module 3 : Index inversé</a></li>
+          <li><a href="/approche4.html">Module 4 : LLM Text-to-SQL</a></li>
+          <li><a href="/donnees.html">Tables & Données</a></li>
+          <li><a href="/cours.html">Notes de cours</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="layout-container">
+    <div class="page-header">
+      <h1 class="page-title">Module 3 : Moteur de recherche d'entreprise (SQLite FTS5 & BM25)</h1>
+      <p class="page-desc">
+        Indexation plein texte par index inversé : recherche par lexèmes, opérateurs booléens, calcul de score de pertinence statistique (BM25) et facettes relationnelles.
+      </p>
+    </div>
+
+    <!-- Console de recherche -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Moteur de recherche plein texte</span>
+      </div>
+
+      <form id="search-form">
+        <div class="form-row">
+          <input type="text" id="query-input" class="input-text" placeholder="Entrez des termes (ex: casque bluetooth, clavier OR souris, ordin*)..." autocomplete="off">
+          <button type="submit" class="btn-primary">Rechercher</button>
+        </div>
+
+        <div style="display: flex; gap: 1rem; align-items: center; background: #f8fafc; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 0.75rem; font-size: 0.85rem;">
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <label for="cat-select" style="font-weight: 500; color: var(--text-secondary);">Facette Catégorie :</label>
+            <select id="cat-select" style="padding: 0.25rem 0.5rem; border-radius: 3px; border: 1px solid var(--border-dark); font-size: 0.8rem;">
+              <option value="">Toutes</option>
+            </select>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <label for="prix-input" style="font-weight: 500; color: var(--text-secondary);">Prix max :</label>
+            <input type="number" id="prix-input" placeholder="Ex: 250" style="width: 80px; padding: 0.25rem 0.4rem; border-radius: 3px; border: 1px solid var(--border-dark); font-size: 0.8rem;">
+            <span style="color: var(--text-muted);">€</span>
+          </div>
+        </div>
+      </form>
+
+      <div class="samples-bar">
+        <span class="samples-label">Jeux d'essai FTS :</span>
+        <button type="button" class="sample-btn" onclick="setQuery('casque bluetooth')">casque bluetooth</button>
+        <button type="button" class="sample-btn" onclick="setQuery('ordinateur 4k')">ordinateur 4k</button>
+        <button type="button" class="sample-btn" onclick="setQuery('clavier OR souris')">clavier OR souris</button>
+        <button type="button" class="sample-btn" onclick="setQuery('reduction active')">"reduction active"</button>
+        <button type="button" class="sample-btn" onclick="setQuery('ecran 144hz')">ecran 144hz</button>
+        <button type="button" class="sample-btn" onclick="setQuery('sans fil')">sans fil</button>
+      </div>
+    </div>
+
+    <!-- Zone de sortie -->
+    <div id="output-container" style="display: none;">
+      
+      <!-- Trace du pipeline FTS -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Journal d'exécution FTS5</span>
+        </div>
+        <div id="trace-log" class="trace-log"></div>
+      </div>
+
+      <!-- SQL FTS5 -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Requête compilée FTS5 (Opérateur MATCH & BM25)</span>
+          <span class="tag tag-neutral">SQLite FTS5</span>
+        </div>
+        <div class="code-box">
+          <pre><code id="sql-code"></code></pre>
+        </div>
+        <div class="code-meta">
+          Expression FTS liée : <span id="sql-params" style="font-weight: 600;"></span>
+        </div>
+      </div>
+
+      <!-- Plan d'exécution SQLite -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Plan d'exécution moteur (EXPLAIN QUERY PLAN)</span>
+        </div>
+        <div class="table-wrapper">
+          <table id="plan-table">
+            <thead>
+              <tr>
+                <th style="width: 80px;">Étape</th>
+                <th>Opération interne SQLite</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Résultats classés par BM25 -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Résultats classés par pertinence statistique (BM25)</span>
+          <span id="rows-count" style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);"></span>
+        </div>
+        <div class="table-wrapper">
+          <table id="results-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">ID</th>
+                <th style="width: 180px;">Produit</th>
+                <th style="width: 110px;">Catégorie</th>
+                <th style="width: 80px;">Prix</th>
+                <th style="width: 70px;">Stock</th>
+                <th style="width: 90px;">Score BM25</th>
+                <th>Description (Surlignage highlight FTS5)</th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    <div class="layout-container">
+      Module 3 — Recherche documentaire et indexation inversée
+    </div>
+  </footer>
+
+  <script>
+    const form = document.getElementById('search-form');
+    const input = document.getElementById('query-input');
+    const catSelect = document.getElementById('cat-select');
+    const prixInput = document.getElementById('prix-input');
+
+    // Charger les facettes
+    fetch('/api/metadata')
+      .then(r => r.json())
+      .then(data => {
+        if (data.facettesApproche3 && data.facettesApproche3.categories) {
+          data.facettesApproche3.categories.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            catSelect.appendChild(opt);
+          });
+        }
+      })
+      .catch(console.error);
+
+    function setQuery(txt) {
+      input.value = txt;
+      runSearch();
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      runSearch();
+    });
+
+    async function runSearch() {
+      const q = input.value.trim();
+      if (!q) return;
+
+      const facettes = {};
+      if (catSelect.value) facettes.categorie = catSelect.value;
+      if (prixInput.value) facettes.prixMax = parseFloat(prixInput.value);
+
+      const outputContainer = document.getElementById('output-container');
+      outputContainer.style.display = 'block';
+
+      try {
+        const res = await fetch('/api/approche3', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: q, facettes })
+        });
+        const data = await res.json();
+
+        // 1. Trace
+        const traceLog = document.getElementById('trace-log');
+        traceLog.innerHTML = '';
+        if (data.etapes) {
+          data.etapes.forEach(s => {
+            const row = document.createElement('div');
+            row.className = 'trace-item';
+            row.innerHTML = `<span class="trace-step">${s.etape}</span><span class="trace-content">${s.detail}</span>`;
+            traceLog.appendChild(row);
+          });
+        }
+
+        if (data.succes) {
+          document.getElementById('sql-code').textContent = data.sql;
+          document.getElementById('sql-params').textContent = JSON.stringify(data.params);
+
+          // Plan
+          const planTbody = document.querySelector('#plan-table tbody');
+          planTbody.innerHTML = '';
+          if (data.planExecution) {
+            data.planExecution.forEach(p => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td><code>#${p.id}</code></td><td><code>${p.detail}</code></td>`;
+              planTbody.appendChild(tr);
+            });
+          }
+
+          // Table
+          const tbody = document.getElementById('table-body');
+          tbody.innerHTML = '';
+          document.getElementById('rows-count').textContent = `${data.totalLignes} document(s)`;
+
+          if (data.resultats && data.resultats.length > 0) {
+            data.resultats.forEach(row => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td><code>#${row.id}</code></td>
+                <td><strong>${row.nom}</strong></td>
+                <td><span class="tag tag-neutral">${row.categorie}</span></td>
+                <td>${row.prix} €</td>
+                <td>${row.stock}</td>
+                <td><code>${row.score_bm25}</code></td>
+                <td>${row.description_surlignee}</td>
+              `;
+              tbody.appendChild(tr);
+            });
+          } else {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Aucun document correspondant.</td></tr>';
+          }
+        } else {
+          alert('Erreur : ' + data.erreur);
+        }
+
+      } catch (err) {
+        alert('Erreur réseau : ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

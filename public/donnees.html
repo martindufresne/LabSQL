@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explorateur de données SQLite (Banc d'essai)</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .tab-btn {
+      background: #ffffff;
+      border: 1px solid var(--border-dark);
+      padding: 0.45rem 0.85rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.1s;
+    }
+    .tab-btn:hover {
+      background: #f3f4f6;
+      color: var(--text-primary);
+    }
+    .tab-btn.tab-active {
+      background: #1e293b;
+      color: #ffffff;
+      border-color: #1e293b;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="layout-container nav-bar">
+      <a href="/" class="nav-title">
+        <span>Laboratoire SQL</span>
+        <span class="nav-tag">Banc de données</span>
+      </a>
+      <nav>
+        <ul>
+          <li><a href="/">Vue d'ensemble</a></li>
+          <li><a href="/approche1.html">Module 1 : Grammaire formelle</a></li>
+          <li><a href="/approche2.html">Module 2 : Couche sémantique</a></li>
+          <li><a href="/approche3.html">Module 3 : Index inversé</a></li>
+          <li><a href="/approche4.html">Module 4 : LLM Text-to-SQL</a></li>
+          <li><a href="/donnees.html" class="active">Tables & Données</a></li>
+          <li><a href="/cours.html">Notes de cours</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="layout-container">
+    <div class="page-header">
+      <h1 class="page-title">Explorateur & Connexion aux bases de données</h1>
+      <p class="page-desc">
+        Visualisation des données réelles et explications techniques sur la manière dont une application Node.js se connecte à SQLite, PostgreSQL ou MySQL.
+      </p>
+    </div>
+
+    <!-- Panneau Théorie et Pratique : Comment on connecte une base de données -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Comprendre la connexion : Architecture, Drivers et Protocoles</span>
+        <span class="tag tag-metric">Fondation Système</span>
+      </div>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+        Dans ce laboratoire, nous utilisons <strong>SQLite</strong> car il ne nécessite aucun serveur externe. Mais comment le même code s'adapte-t-il à un serveur de production comme <strong>PostgreSQL</strong> ou <strong>MySQL</strong> ?
+      </p>
+
+      <!-- Boutons de sélection de SGBD -->
+      <div style="display: flex; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap;">
+        <button type="button" class="tab-btn tab-active" id="conn-btn-sqlite" onclick="afficherConnexion('sqlite')">1. SQLite (Embarqué / In-Process)</button>
+        <button type="button" class="tab-btn" id="conn-btn-postgres" onclick="afficherConnexion('postgres')">2. PostgreSQL (Client-Serveur & Pool)</button>
+        <button type="button" class="tab-btn" id="conn-btn-mysql" onclick="afficherConnexion('mysql')">3. MySQL (Client-Serveur)</button>
+        <button type="button" class="tab-btn" id="conn-btn-knex" onclick="afficherConnexion('knex')">4. Code Portable (Query Builder Knex)</button>
+      </div>
+
+      <!-- Contenu dynamique de la connexion -->
+      <div id="conn-content-box" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 4px; padding: 1rem;">
+        <!-- Injecté dynamiquement par JS -->
+      </div>
+    </div>
+
+    <!-- Onglets des tables -->
+    <div class="panel" style="padding: 0.75rem 1rem;">
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;" id="tabs-container">
+        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-right: 0.5rem;">Sélectionner une table :</span>
+      </div>
+    </div>
+
+    <!-- Panneau Schéma de la table -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title" id="schema-title">Structure de la table</span>
+        <span id="rows-badge" class="tag tag-neutral"></span>
+      </div>
+      <div class="table-wrapper" style="margin-bottom: 0.75rem;">
+        <table id="schema-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">CID</th>
+              <th>Nom de colonne</th>
+              <th>Type SQL</th>
+              <th>Non Null</th>
+              <th>Clé Primaire (PK)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Données de la table sélectionnée -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title" id="data-title">Données contenues</span>
+      </div>
+      <div class="table-wrapper">
+        <table id="data-table">
+          <thead id="data-thead"></thead>
+          <tbody id="data-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Console SQL directe pour tests libres -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Console SQL directe (Requêtes SELECT de vérification)</span>
+        <span class="tag tag-neutral">Mode Test</span>
+      </div>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">
+        Exécutez n'importe quelle requête SQL directe sur SQLite pour vérifier les données manuellement.
+      </p>
+      <form id="sql-direct-form">
+        <div class="form-row">
+          <input type="text" id="sql-direct-input" class="input-text" value="SELECT * FROM produits WHERE stock > 20;" placeholder="Ex: SELECT * FROM clients WHERE ville = 'Paris';">
+          <button type="submit" class="btn-primary">Exécuter SQL</button>
+        </div>
+      </form>
+
+      <div id="sql-direct-result" style="display: none; margin-top: 1rem;">
+        <div class="panel-header" style="margin-bottom: 0.5rem;">
+          <span class="panel-title" style="font-size: 0.8rem;">Résultat de la requête manuelle</span>
+          <span id="direct-count" class="tag tag-neutral"></span>
+        </div>
+        <div class="table-wrapper">
+          <table id="direct-table">
+            <thead id="direct-thead"></thead>
+            <tbody id="direct-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="layout-container">
+      Explorateur de base de données SQLite — Support de cours
+    </div>
+  </footer>
+
+  <script>
+    let tableActive = 'produits';
+
+    // Charger les tables au démarrage
+    fetch('/api/tables')
+      .then(r => r.json())
+      .then(data => {
+        const container = document.getElementById('tabs-container');
+        data.tables.forEach(t => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `tab-btn ${t.nom === tableActive ? 'tab-active' : ''}`;
+          btn.textContent = `${t.nom} (${t.totalLignes})`;
+          btn.onclick = () => chargerTable(t.nom);
+          container.appendChild(btn);
+        });
+        chargerTable(tableActive);
+      })
+      .catch(console.error);
+
+    // Charger les détails d'une table
+    async function chargerTable(nom) {
+      tableActive = nom;
+
+      // Mettre à jour l'apparence des onglets
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        if (b.textContent.startsWith(nom + ' ')) {
+          b.classList.add('tab-active');
+        } else {
+          b.classList.remove('tab-active');
+        }
+      });
+
+      try {
+        const res = await fetch(`/api/table/${nom}`);
+        const data = await res.json();
+
+        document.getElementById('schema-title').textContent = `Structure : ${data.table}`;
+        document.getElementById('rows-badge').textContent = `${data.total} ligne(s)`;
+        document.getElementById('data-title').textContent = `Contenu de la table : ${data.table}`;
+
+        // 1. Remplir le schéma
+        const schemaTbody = document.querySelector('#schema-table tbody');
+        schemaTbody.innerHTML = '';
+        if (data.colonnes) {
+          data.colonnes.forEach(c => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><code>${c.cid}</code></td>
+              <td><strong>${c.name}</strong></td>
+              <td><span class="tag tag-neutral">${c.type || 'TEXT'}</span></td>
+              <td>${c.notnull ? '<span class="tag tag-metric">OUI</span>' : 'NON'}</td>
+              <td>${c.pk ? '<span class="tag tag-dim">PRIMARY KEY</span>' : '-'}</td>
+            `;
+            schemaTbody.appendChild(tr);
+          });
+        }
+
+        // 2. Remplir les données
+        const thead = document.getElementById('data-thead');
+        const tbody = document.getElementById('data-tbody');
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+
+        if (data.rows && data.rows.length > 0) {
+          const cols = Object.keys(data.rows[0]);
+          const trHead = document.createElement('tr');
+          cols.forEach(c => {
+            const th = document.createElement('th');
+            th.textContent = c;
+            trHead.appendChild(th);
+          });
+          thead.appendChild(trHead);
+
+          data.rows.forEach(row => {
+            const tr = document.createElement('tr');
+            cols.forEach(c => {
+              const td = document.createElement('td');
+              td.textContent = row[c] !== null ? row[c] : 'NULL';
+              tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        alert('Erreur chargement table : ' + err.message);
+      }
+    }
+
+    // Documentation interactive de la connexion
+    const CONTENUS_CONNEXION = {
+      sqlite: `
+        <div style="font-size: 0.875rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <strong>SQLite : Modèle Embarqué (In-Process)</strong>
+            <span class="tag tag-neutral">Driver natif : node:sqlite</span>
+          </div>
+          <p style="color: var(--text-secondary); margin-bottom: 0.75rem;">
+            Contrairement aux bases de données traditionnelles, <strong>SQLite ne possède pas de serveur</strong>. Il n'y a aucun processus indépendant en écoute, aucun port réseau et aucun socket TCP. Le moteur SQL est une bibliothèque C intégrée directement au processus de votre application Node.js.
+          </p>
+          <div class="code-box" style="margin-bottom: 0.75rem; background: #0f172a;">
+            <pre>Flux : [Application Node.js] ──(Descripteur de fichier OS direct)──► [data.db sur le disque]</pre>
+          </div>
+          <div class="code-box" style="margin-bottom: 0.75rem;">
+            <pre><code>// Connexion en Node.js (natif Node 22+)
+const { DatabaseSync } = require('node:sqlite');
+const db = new DatabaseSync('./database/data.db');
+
+// Activer les clés étrangères et le mode WAL (concurrence optimale)
+db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;');
+
+// Exécution synchrone ultra-rapide (< 0.5 ms)
+const stmt = db.prepare('SELECT * FROM produits WHERE stock > ?');
+const produits = stmt.all(10);</code></pre>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.8rem;">
+            <strong>Cas d'usage :</strong> Idéal pour l'apprentissage, les tests unitaires, le développement local, les téléphones mobiles (iOS/Android), et les applications de bureau. Inadapté si plusieurs serveurs web distants doivent écrire simultanément sur la même base.
+          </p>
+        </div>
+      `,
+      postgres: `
+        <div style="font-size: 0.875rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <strong>PostgreSQL : Modèle Client-Serveur & Connection Pool</strong>
+            <span class="tag tag-metric">Driver standard : pg (node-postgres)</span>
+          </div>
+          <p style="color: var(--text-secondary); margin-bottom: 0.75rem;">
+            PostgreSQL est un processus serveur autonome écoutant sur le <strong>port TCP 5432</strong>. Ouvrir et fermer une connexion réseau à chaque clic utilisateur prendrait 50 à 200 ms (négociation TLS + authentification). En production, on utilise impérativement un <strong>Pool de connexions</strong> qui garde 10 à 20 connexions persistantes pré-ouvertes.
+          </p>
+          <div class="code-box" style="margin-bottom: 0.75rem; background: #0f172a;">
+            <pre>Flux : [Requête Web] ──► [Pool de Connexions] ──(Socket TCP/IP 5432)──► [Serveur PostgreSQL distant]</pre>
+          </div>
+          <div style="background: #ffffff; border: 1px solid var(--border-dark); padding: 0.6rem 0.85rem; border-radius: 4px; margin-bottom: 0.75rem; font-family: var(--font-mono); font-size: 0.8rem;">
+            <strong>Anatomie de la Connection String (URI) :</strong><br>
+            <span style="color: var(--accent-primary);">postgresql://</span><span style="color: #9333ea;">app_user</span>:<span style="color: #e11d48;">motdepasse123</span>@<span style="color: #059669;">db.entreprise.com:5432</span>/<span style="color: #d97706;">boutique_prod</span>
+          </div>
+          <div class="code-box" style="margin-bottom: 0.75rem;">
+            <pre><code>const { Pool } = require('pg');
+
+// Initialisation du Pool au démarrage du serveur
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL, // Lu depuis les variables d'environnement
+  max: 20,                                     // Maximum 20 connexions simultanées
+  idleTimeoutMillis: 30000                     // Ferme les connexions inutilisées après 30s
+});
+
+// Emprunt automatique, exécution et libération instantanée
+const { rows } = await pool.query('SELECT * FROM produits WHERE stock > $1', [10]);</code></pre>
+          </div>
+        </div>
+      `,
+      mysql: `
+        <div style="font-size: 0.875rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <strong>MySQL / MariaDB : Modèle Client-Serveur</strong>
+            <span class="tag tag-filter">Driver standard : mysql2</span>
+          </div>
+          <p style="color: var(--text-secondary); margin-bottom: 0.75rem;">
+            Similaire à PostgreSQL, le serveur MySQL écoute par défaut sur le <strong>port TCP 3306</strong>. Le driver <code>mysql2/promise</code> fournit une gestion asynchrone moderne avec promesses et requêtes préparées automatiques.
+          </p>
+          <div class="code-box" style="margin-bottom: 0.75rem; background: #0f172a;">
+            <pre>Flux : [Application Node.js] ──(Pool de connexions TCP/IP 3306)──► [Serveur MySQL]</pre>
+          </div>
+          <div class="code-box" style="margin-bottom: 0.75rem;">
+            <pre><code>const mysql = require('mysql2/promise');
+
+// Création du pool
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  port: 3306,
+  user: process.env.DB_USER || 'app_user',
+  password: process.env.DB_PASSWORD,
+  database: 'boutique',
+  connectionLimit: 15
+});
+
+// Exécution avec requête préparée sécurisée
+const [produits] = await pool.execute('SELECT * FROM produits WHERE stock > ?', [10]);</code></pre>
+          </div>
+        </div>
+      `,
+      knex: `
+        <div style="font-size: 0.875rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <strong>Code Agnostique Multi-SGBD (Query Builder Knex.js / Kysely)</strong>
+            <span class="tag tag-dim">Portabilité Totale</span>
+          </div>
+          <p style="color: var(--text-secondary); margin-bottom: 0.75rem;">
+            Comment faire pour que le même code applicatif fonctionne sur <strong>SQLite en développement</strong> et sur <strong>PostgreSQL en production</strong> sans réécrire les requêtes ? On utilise un constructeur de requêtes (Query Builder).
+          </p>
+          <div class="code-box" style="margin-bottom: 0.75rem;">
+            <pre><code>const knex = require('knex');
+
+// Configuration unique commutant selon l'environnement
+const db = knex({
+  client: process.env.NODE_ENV === 'production' ? 'pg' : 'sqlite3',
+  connection: process.env.NODE_ENV === 'production' 
+    ? process.env.DATABASE_URL 
+    : { filename: './database/data.db' },
+  useNullAsDefault: true
+});
+
+// Le code ci-dessous est 100% IDENTIQUE sur SQLite, PostgreSQL ou MySQL :
+const resultats = await db('produits')
+  .where('stock', '>', 10)
+  .orderBy('prix', 'desc')
+  .select('id', 'nom', 'prix', 'stock');</code></pre>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.8rem;">
+            <strong>Avantage industriel :</strong> Permet aux développeurs de travailler hors-ligne en local sur SQLite sans installer Docker ni PostgreSQL, tout en déployant sur un cluster PostgreSQL managé dans le cloud.
+          </p>
+        </div>
+      `
+    };
+
+    function afficherConnexion(type) {
+      document.getElementById('conn-btn-sqlite').className = `tab-btn ${type === 'sqlite' ? 'tab-active' : ''}`;
+      document.getElementById('conn-btn-postgres').className = `tab-btn ${type === 'postgres' ? 'tab-active' : ''}`;
+      document.getElementById('conn-btn-mysql').className = `tab-btn ${type === 'mysql' ? 'tab-active' : ''}`;
+      document.getElementById('conn-btn-knex').className = `tab-btn ${type === 'knex' ? 'tab-active' : ''}`;
+
+      document.getElementById('conn-content-box').innerHTML = CONTENUS_CONNEXION[type] || '';
+    }
+
+    // Afficher SQLite par défaut
+    afficherConnexion('sqlite');
+
+    // Console SQL directe
+    document.getElementById('sql-direct-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const sql = document.getElementById('sql-direct-input').value.trim();
+      if (!sql) return;
+
+      const resultBox = document.getElementById('sql-direct-result');
+      resultBox.style.display = 'block';
+
+      try {
+        const res = await fetch('/api/sql-direct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sql })
+        });
+        const data = await res.json();
+
+        const thead = document.getElementById('direct-thead');
+        const tbody = document.getElementById('direct-tbody');
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+
+        if (data.succes) {
+          document.getElementById('direct-count').textContent = `${data.total} ligne(s)`;
+          if (data.rows && data.rows.length > 0) {
+            const cols = Object.keys(data.rows[0]);
+            const trHead = document.createElement('tr');
+            cols.forEach(c => {
+              const th = document.createElement('th');
+              th.textContent = c;
+              trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+
+            data.rows.forEach(row => {
+              const tr = document.createElement('tr');
+              cols.forEach(c => {
+                const td = document.createElement('td');
+                td.textContent = row[c] !== null ? row[c] : 'NULL';
+                tr.appendChild(td);
+              });
+              tbody.appendChild(tr);
+            });
+          } else {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">0 résultat.</td></tr>';
+          }
+        } else {
+          alert('Erreur SQL : ' + data.erreur);
+        }
+      } catch (err) {
+        alert('Erreur : ' + err.message);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laboratoire SQL : Traitement de requêtes sans LLM</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <header>
+    <div class="layout-container nav-bar">
+      <a href="/" class="nav-title">
+        <span>Laboratoire SQL</span>
+        <span class="nav-tag">NL2SQL Déterministe</span>
+      </a>
+      <nav>
+        <ul>
+          <li><a href="/" class="active">Vue d'ensemble</a></li>
+          <li><a href="/approche1.html">Module 1 : Grammaire formelle</a></li>
+          <li><a href="/approche2.html">Module 2 : Couche sémantique</a></li>
+          <li><a href="/approche3.html">Module 3 : Index inversé</a></li>
+          <li><a href="/approche4.html">Module 4 : LLM Text-to-SQL</a></li>
+          <li><a href="/donnees.html">Tables & Données</a></li>
+          <li><a href="/cours.html">Notes de cours</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="layout-container">
+    <div class="page-header">
+      <h1 class="page-title">Mécanismes d'interrogation et de recherche dans une base relationnelle</h1>
+      <p class="page-desc">
+        Expérimentation pratique des architectures déterministes utilisées pour mapper une intention textuelle vers des requêtes SQL exécutables.
+      </p>
+    </div>
+
+    <!-- Données du banc d'essai -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Banc d'essai local (SQLite)</span>
+        <span class="nav-tag">data.db</span>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.875rem;">
+        Ce laboratoire s'appuie sur une base de données locale respectant la norme ANSI SQL standard. Les mêmes principes de compilation s'appliquent directement sur PostgreSQL, MySQL ou BigQuery.
+      </p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 4px;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Table clients</div>
+          <div style="font-size: 1.35rem; font-weight: 700; font-family: var(--font-mono);" id="stat-clients">-</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 4px;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Table produits</div>
+          <div style="font-size: 1.35rem; font-weight: 700; font-family: var(--font-mono);" id="stat-produits">-</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 4px;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Table commandes</div>
+          <div style="font-size: 1.35rem; font-weight: 700; font-family: var(--font-mono);" id="stat-commandes">-</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 4px;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Table virtuelle FTS5</div>
+          <div style="font-size: 1.35rem; font-weight: 700; font-family: var(--font-mono); color: var(--accent-success);">fts_catalogue</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modules de travaux pratiques -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      
+      <!-- Module 1 -->
+      <div class="panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div class="panel-header">
+            <span class="panel-title">Module 1</span>
+            <span class="tag tag-neutral">TALN Symbolique</span>
+          </div>
+          <h2 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem;">Grammaires formelles & Analyse syntaxique</h2>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+            Application de règles structurelles rigides (CFG / expressions régulières). Extraction des variables lexicales (entités, attributs, comparateurs) et injection dans des gabarits de requêtes préparées.
+          </p>
+        </div>
+        <div>
+          <a href="/approche1.html" class="btn-primary" style="display: inline-block; text-decoration: none; width: 100%; text-align: center;">Ouvrir la console Module 1</a>
+        </div>
+      </div>
+
+      <!-- Module 2 -->
+      <div class="panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div class="panel-header">
+            <span class="panel-title">Module 2</span>
+            <span class="tag tag-metric">Business Intelligence</span>
+          </div>
+          <h2 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem;">Couche sémantique & Recherche floue (Fuse.js)</h2>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+            Architecture inspirée des modules Q&A (Power BI / Tableau). Découpage de l'intention en mesures d'agrégation, dimensions de regroupement et filtres de valeurs, avec tolérance aux fautes de frappe.
+          </p>
+        </div>
+        <div>
+          <a href="/approche2.html" class="btn-primary" style="display: inline-block; text-decoration: none; width: 100%; text-align: center;">Ouvrir la console Module 2</a>
+        </div>
+      </div>
+
+      <!-- Module 3 -->
+      <div class="panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div class="panel-header">
+            <span class="panel-title">Module 3</span>
+            <span class="tag tag-filter">Recherche plein texte</span>
+          </div>
+          <h2 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem;">Index inversé & Scoring BM25 (SQLite FTS5)</h2>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+            Architecture des moteurs de recherche d'entreprise (Elasticsearch / ThoughtSpot). Indexation en lexèmes, requêtes booléennes, classement probabiliste BM25 et filtrage à facettes.
+          </p>
+        </div>
+        <div>
+          <a href="/approche3.html" class="btn-primary" style="display: inline-block; text-decoration: none; width: 100%; text-align: center;">Ouvrir la console Module 3</a>
+        </div>
+      </div>
+
+      <!-- Module 4 -->
+      <div class="panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div class="panel-header">
+            <span class="panel-title">Module 4</span>
+            <span class="tag tag-metric">LLM Local (Ollama)</span>
+          </div>
+          <h2 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem;">Text-to-SQL Génératif (Ollama)</h2>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+            Traduction zero-shot par modèle de langage local (Llama 3.2, Llama 3.1, Qwen 2.5). Injection du schéma relationnel dans le prompt système et validation par bac à sable de sécurité.
+          </p>
+        </div>
+        <div>
+          <a href="/approche4.html" class="btn-primary" style="display: inline-block; text-decoration: none; width: 100%; text-align: center;">Ouvrir la console Module 4</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tableau comparatif technique -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Comparatif technique des approches</span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Architecture</th>
+              <th>Principe d'extraction</th>
+              <th>Gestion des variations</th>
+              <th>Complexité d'exécution</th>
+              <th>Cas d'application cible</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Grammaire formelle</strong></td>
+              <td>Arbres syntaxiques & regex</td>
+              <td>Nulle (échec sur tout mot imprévu)</td>
+              <td>O(1) - Recherche dans table de règles</td>
+              <td>Commandes administratives strictes</td>
+            </tr>
+            <tr>
+              <td><strong>2. Couche sémantique (BI)</strong></td>
+              <td>Dictionnaire (Mesures / Dimensions) + Levenshtein</td>
+              <td>Élevée (tolère fautes et inversions)</td>
+              <td>O(M · N) - Distance de chaîne sur lexique</td>
+              <td>Interrogation décisionnelle et analytique</td>
+            </tr>
+            <tr>
+              <td><strong>3. Index Inversé (FTS)</strong></td>
+              <td>Découpage en lexèmes + B-Tree d'occurrences</td>
+              <td>Partielle (opérateurs *, AND, OR)</td>
+              <td>O(log N) - Recherche par index</td>
+              <td>Catalogues produits et recherche documentaire</td>
+            </tr>
+            <tr>
+              <td><strong>4. LLM Text-to-SQL (Ollama)</strong></td>
+              <td>Compréhension contextuelle par réseau de neurones</td>
+              <td>Maximale (comprend toute formulation libre)</td>
+              <td>O(Tokens) - Inférence LLM (~1 à 3 s)</td>
+              <td>Requêtes ad-hoc libres et analytique conversationnelle</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="layout-container">
+      Support de laboratoire SQL — Département Informatique
+    </div>
+  </footer>
+
+  <script>
+    fetch('/api/metadata')
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('stat-clients').textContent = data.statistiques.clients;
+        document.getElementById('stat-produits').textContent = data.statistiques.produits;
+        document.getElementById('stat-commandes').textContent = data.statistiques.commandes;
+      })
+      .catch(console.error);
+  </script>
+</body>
+</html>

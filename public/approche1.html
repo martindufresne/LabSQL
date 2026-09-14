@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1 : Analyse syntaxique et grammaires formelles</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <header>
+    <div class="layout-container nav-bar">
+      <a href="/" class="nav-title">
+        <span>Laboratoire SQL</span>
+        <span class="nav-tag">Module 1</span>
+      </a>
+      <nav>
+        <ul>
+          <li><a href="/">Vue d'ensemble</a></li>
+          <li><a href="/approche1.html" class="active">Module 1 : Grammaire formelle</a></li>
+          <li><a href="/approche2.html">Module 2 : Couche sémantique</a></li>
+          <li><a href="/approche3.html">Module 3 : Index inversé</a></li>
+          <li><a href="/approche4.html">Module 4 : LLM Text-to-SQL</a></li>
+          <li><a href="/donnees.html">Tables & Données</a></li>
+          <li><a href="/cours.html">Notes de cours</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="layout-container">
+    <div class="page-header">
+      <h1 class="page-title">Module 1 : Analyse syntaxique et grammaires formelles (NL2SQL classique)</h1>
+      <p class="page-desc">
+        Le moteur analyse la structure lexicale d'une phrase et tente de la faire correspondre à un catalogue ordonné de règles formelles (CFG / Regex).
+      </p>
+    </div>
+
+    <!-- Console de requête -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Entrée de commande</span>
+      </div>
+
+      <form id="search-form">
+        <div class="form-row">
+          <input type="text" id="question-input" class="input-text" placeholder="Entrez une question (ex: combien de clients, produits avec prix > 100)..." autocomplete="off">
+          <button type="submit" class="btn-primary">Analyser & Exécuter</button>
+        </div>
+      </form>
+
+      <div class="samples-bar">
+        <span class="samples-label">Jeux d'essai valides :</span>
+        <button type="button" class="sample-btn" onclick="setQuery('combien de clients')">combien de clients</button>
+        <button type="button" class="sample-btn" onclick="setQuery('combien de commandes livrees')">combien de commandes livrees</button>
+        <button type="button" class="sample-btn" onclick="setQuery('liste des clients de Paris')">liste des clients de Paris</button>
+        <button type="button" class="sample-btn" onclick="setQuery('produits avec prix > 100')">produits avec prix > 100</button>
+        <button type="button" class="sample-btn" onclick="setQuery('commandes apres le 2023-06-01')">commandes apres le 2023-06-01</button>
+      </div>
+
+      <div class="samples-bar" style="margin-top: 0.4rem;">
+        <span class="samples-label">Jeux d'essai hors grammaire :</span>
+        <button type="button" class="sample-btn sample-invalid" onclick="setQuery('qui a acheté quoi en 2023 ?')">qui a acheté quoi en 2023 ?</button>
+        <button type="button" class="sample-btn sample-invalid" onclick="setQuery('donne moi le chiffre d affaires')">donne moi le chiffre d'affaires</button>
+      </div>
+    </div>
+
+    <!-- Zone de sortie du compilateur -->
+    <div id="output-container" style="display: none;">
+      
+      <!-- Trace du pipeline -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Journal d'exécution du parser</span>
+        </div>
+        <div id="trace-log" class="trace-log"></div>
+      </div>
+
+      <!-- SQL généré -->
+      <div class="panel" id="sql-panel">
+        <div class="panel-header">
+          <span class="panel-title">Requête compilée</span>
+          <span id="rule-tag" class="tag tag-neutral"></span>
+        </div>
+        <div class="code-box">
+          <pre><code id="sql-code"></code></pre>
+        </div>
+        <div class="code-meta">
+          Paramètres liés : <span id="sql-params" style="font-weight: 600;"></span>
+        </div>
+      </div>
+
+      <!-- Plan d'exécution SQLite -->
+      <div class="panel" id="plan-panel">
+        <div class="panel-header">
+          <span class="panel-title">Plan d'exécution moteur (EXPLAIN QUERY PLAN)</span>
+        </div>
+        <div class="table-wrapper">
+          <table id="plan-table">
+            <thead>
+              <tr>
+                <th style="width: 80px;">Étape</th>
+                <th>Opération interne SQLite</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Données -->
+      <div class="panel" id="data-panel">
+        <div class="panel-header">
+          <span class="panel-title">Résultats de la requête</span>
+          <span id="rows-count" style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);"></span>
+        </div>
+        <div class="table-wrapper">
+          <table id="results-table">
+            <thead id="table-head"></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Erreur de syntaxe -->
+      <div class="panel" id="error-panel" style="display: none; border-color: #fecaca;">
+        <div class="panel-header" style="border-bottom-color: #fecaca;">
+          <span class="panel-title" style="color: var(--accent-danger);">Échec de correspondance grammaticale</span>
+        </div>
+        <div id="error-desc" class="msg-box msg-error" style="margin-bottom: 0.75rem;"></div>
+        <div style="font-size: 0.85rem; color: var(--text-secondary);">
+          <div style="font-weight: 600; margin-bottom: 0.35rem;">Grammaires formelles acceptées :</div>
+          <ul id="grammar-rules-list" style="margin-left: 1.25rem; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);"></ul>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    <div class="layout-container">
+      Module 1 — Analyse syntaxique déterministe
+    </div>
+  </footer>
+
+  <script>
+    const form = document.getElementById('search-form');
+    const input = document.getElementById('question-input');
+
+    function setQuery(txt) {
+      input.value = txt;
+      runParser();
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      runParser();
+    });
+
+    async function runParser() {
+      const q = input.value.trim();
+      if (!q) return;
+
+      const outputContainer = document.getElementById('output-container');
+      const sqlPanel = document.getElementById('sql-panel');
+      const planPanel = document.getElementById('plan-panel');
+      const dataPanel = document.getElementById('data-panel');
+      const errorPanel = document.getElementById('error-panel');
+
+      outputContainer.style.display = 'block';
+
+      try {
+        const res = await fetch('/api/approche1', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q })
+        });
+        const data = await res.json();
+
+        // 1. Trace
+        const traceLog = document.getElementById('trace-log');
+        traceLog.innerHTML = '';
+        if (data.etapes) {
+          data.etapes.forEach(s => {
+            const row = document.createElement('div');
+            row.className = 'trace-item';
+            row.innerHTML = `<span class="trace-step">${s.etape}</span><span class="trace-content">${s.detail}</span>`;
+            traceLog.appendChild(row);
+          });
+        }
+
+        if (data.succes) {
+          errorPanel.style.display = 'none';
+          sqlPanel.style.display = 'block';
+          planPanel.style.display = 'block';
+          dataPanel.style.display = 'block';
+
+          document.getElementById('rule-tag').textContent = `RULE: ${data.regleUtilisee}`;
+          document.getElementById('sql-code').textContent = data.sql;
+          document.getElementById('sql-params').textContent = JSON.stringify(data.params);
+
+          // Plan
+          const planTbody = document.querySelector('#plan-table tbody');
+          planTbody.innerHTML = '';
+          if (data.planExecution) {
+            data.planExecution.forEach(p => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td><code>#${p.id}</code></td><td><code>${p.detail}</code></td>`;
+              planTbody.appendChild(tr);
+            });
+          }
+
+          // Table
+          const thead = document.getElementById('table-head');
+          const tbody = document.getElementById('table-body');
+          thead.innerHTML = '';
+          tbody.innerHTML = '';
+
+          document.getElementById('rows-count').textContent = `${data.totalLignes} ligne(s)`;
+
+          if (data.resultats && data.resultats.length > 0) {
+            const cols = Object.keys(data.resultats[0]);
+            const trHead = document.createElement('tr');
+            cols.forEach(c => {
+              const th = document.createElement('th');
+              th.textContent = c;
+              trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+
+            data.resultats.forEach(row => {
+              const tr = document.createElement('tr');
+              cols.forEach(c => {
+                const td = document.createElement('td');
+                td.textContent = row[c] !== null ? row[c] : 'NULL';
+                tr.appendChild(td);
+              });
+              tbody.appendChild(tr);
+            });
+          } else {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">Aucune donnée retournée.</td></tr>';
+          }
+
+        } else {
+          sqlPanel.style.display = 'none';
+          planPanel.style.display = 'none';
+          dataPanel.style.display = 'none';
+          errorPanel.style.display = 'block';
+
+          document.getElementById('error-desc').textContent = data.erreur;
+          const rulesList = document.getElementById('grammar-rules-list');
+          rulesList.innerHTML = '';
+          if (data.reglesDisponibles) {
+            data.reglesDisponibles.forEach(r => {
+              const li = document.createElement('li');
+              li.textContent = r;
+              rulesList.appendChild(li);
+            });
+          }
+        }
+      } catch (err) {
+        alert('Erreur réseau : ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
