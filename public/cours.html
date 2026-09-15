@@ -4,7 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Notes de Cours : Bases de Données, Connexion & Moteurs de Recherche SQL</title>
+  <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    (function() {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark' || (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
   <script src="js/mermaid.min.js"></script>
   <style>
     /* Styles spécifiques aux notes de cours */
@@ -65,12 +76,12 @@
     }
 
     .sidebar-nav a:hover {
-      background: #f1f5f9;
+      background: var(--bg-surface-secondary);
       color: var(--text-primary);
     }
 
     .sidebar-nav a.active {
-      background: #eff6ff;
+      background: var(--accent-bg);
       color: var(--accent-primary);
       font-weight: 600;
       border-left: 3px solid var(--accent-primary);
@@ -102,8 +113,9 @@
       letter-spacing: 0.06em;
       text-transform: uppercase;
       padding: 0.25rem 0.6rem;
-      background: #e0f2fe;
-      color: #0369a1;
+      background: var(--tag-metric-bg);
+      color: var(--tag-metric-color);
+      border: 1px solid var(--tag-metric-border);
       border-radius: 4px;
       margin-bottom: 1rem;
       font-family: var(--font-mono);
@@ -113,7 +125,7 @@
       font-size: 2.1rem;
       font-weight: 800;
       line-height: 1.25;
-      color: #0f172a;
+      color: var(--text-primary);
       margin-bottom: 0.75rem;
       letter-spacing: -0.02em;
     }
@@ -132,7 +144,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 1rem;
-      background: #f8fafc;
+      background: var(--bg-surface-secondary);
       border: 1px solid var(--border-color);
       border-radius: 6px;
       font-size: 0.85rem;
@@ -159,18 +171,18 @@
       align-items: center;
       gap: 0.4rem;
       background: var(--text-primary);
-      color: #ffffff;
+      color: var(--bg-surface);
       padding: 0.45rem 0.9rem;
       border-radius: 5px;
       font-size: 0.8rem;
       font-weight: 600;
       border: none;
       cursor: pointer;
-      transition: background 0.15s ease;
+      transition: opacity 0.15s ease;
     }
 
     .btn-print:hover {
-      background: #334155;
+      opacity: 0.85;
     }
 
     /* Typographie des sections */
@@ -182,10 +194,10 @@
     .course-section h2 {
       font-size: 1.5rem;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--text-primary);
       margin-bottom: 1rem;
       padding-bottom: 0.5rem;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       gap: 0.6rem;
@@ -197,7 +209,7 @@
       justify-content: center;
       width: 2rem;
       height: 2rem;
-      background: #eff6ff;
+      background: var(--accent-bg);
       color: var(--accent-primary);
       border-radius: 6px;
       font-size: 0.95rem;
@@ -208,13 +220,13 @@
     .course-section h3 {
       font-size: 1.15rem;
       font-weight: 600;
-      color: #1e293b;
+      color: var(--text-primary);
       margin-top: 1.5rem;
       margin-bottom: 0.75rem;
     }
 
     .course-section p {
-      color: #334155;
+      color: var(--text-secondary);
       font-size: 0.95rem;
       line-height: 1.65;
       margin-bottom: 1rem;
@@ -223,7 +235,7 @@
     .course-section ul, .course-section ol {
       margin-left: 1.5rem;
       margin-bottom: 1.25rem;
-      color: #334155;
+      color: var(--text-secondary);
       font-size: 0.95rem;
       line-height: 1.6;
     }
@@ -233,13 +245,13 @@
     }
 
     blockquote.citation {
-      background: #f8fafc;
-      border-left: 4px solid #3b82f6;
+      background: var(--bg-surface-secondary);
+      border-left: 4px solid var(--accent-primary);
       padding: 0.9rem 1.25rem;
       margin: 1.25rem 0;
       border-radius: 0 6px 6px 0;
       font-style: italic;
-      color: #1e293b;
+      color: var(--text-primary);
     }
 
     /* Boîtes d'alertes & callouts */
@@ -255,24 +267,24 @@
     }
 
     .callout-info {
-      background: #f0f9ff;
-      border: 1px solid #bae6fd;
-      color: #0369a1;
-      border-left: 4px solid #0284c7;
+      background: var(--tag-metric-bg);
+      border: 1px solid var(--tag-metric-border);
+      color: var(--tag-metric-color);
+      border-left: 4px solid var(--accent-primary);
     }
 
     .callout-warning {
-      background: #fefce8;
-      border: 1px solid #fef08a;
-      color: #854d0e;
-      border-left: 4px solid #ca8a04;
+      background: var(--tag-dim-bg);
+      border: 1px solid var(--tag-dim-border);
+      color: var(--tag-dim-color);
+      border-left: 4px solid var(--accent-warning);
     }
 
     .callout-tip {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      color: #166534;
-      border-left: 4px solid #16a34a;
+      background: var(--tag-filter-bg);
+      border: 1px solid var(--tag-filter-border);
+      color: var(--tag-filter-color);
+      border-left: 4px solid var(--accent-success);
     }
 
     .callout-title {
@@ -283,7 +295,7 @@
 
     /* Diagrammes */
     .diagram-card {
-      background: #ffffff;
+      background: var(--bg-surface);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 1.5rem;
@@ -303,27 +315,27 @@
     .code-wrapper {
       position: relative;
       margin: 1.25rem 0;
-      background: #0f172a;
+      background: var(--code-bg);
       border-radius: 6px;
       overflow: hidden;
-      border: 1px solid #1e293b;
+      border: 1px solid var(--border-color);
     }
 
     .code-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #1e293b;
+      background: var(--code-header-bg);
       padding: 0.4rem 0.8rem;
       font-family: var(--font-mono);
       font-size: 0.75rem;
-      color: #94a3b8;
+      color: var(--text-muted);
     }
 
     .btn-copy {
       background: transparent;
-      border: 1px solid #334155;
-      color: #cbd5e1;
+      border: 1px solid var(--border-dark);
+      color: var(--text-secondary);
       padding: 0.15rem 0.45rem;
       border-radius: 3px;
       font-size: 0.7rem;
@@ -333,8 +345,8 @@
     }
 
     .btn-copy:hover {
-      background: #334155;
-      color: #ffffff;
+      background: var(--border-color);
+      color: var(--text-primary);
     }
 
     .code-wrapper pre {
@@ -344,8 +356,8 @@
       font-family: var(--font-mono);
       font-size: 0.825rem;
       line-height: 1.5;
-      color: #e2e8f0;
-      background: #0f172a;
+      color: var(--code-text);
+      background: var(--code-bg);
     }
 
     /* Tables de données */
@@ -364,17 +376,17 @@
     }
 
     .data-table th {
-      background: #f8fafc;
-      color: #334155;
+      background: var(--bg-surface-secondary);
+      color: var(--text-secondary);
       font-weight: 600;
       padding: 0.75rem 1rem;
-      border-bottom: 2px solid #e2e8f0;
+      border-bottom: 2px solid var(--border-color);
     }
 
     .data-table td {
       padding: 0.75rem 1rem;
-      border-bottom: 1px solid #e2e8f0;
-      color: #334155;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-primary);
     }
 
     .data-table tr:last-child td {
@@ -382,13 +394,13 @@
     }
 
     .data-table tr:nth-child(even) td {
-      background: #fbfcfe;
+      background: var(--bg-surface-secondary);
     }
 
     /* Boîtes d'exercices */
     .exercise-card {
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
       border-left: 4px solid var(--accent-primary);
       border-radius: 6px;
       padding: 1.25rem 1.5rem;
@@ -399,7 +411,7 @@
     .exercise-title {
       font-size: 1.05rem;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--text-primary);
       margin-bottom: 0.5rem;
       display: flex;
       align-items: center;
@@ -409,7 +421,7 @@
     .exercise-steps {
       margin-left: 1.25rem;
       margin-top: 0.5rem;
-      color: #334155;
+      color: var(--text-secondary);
     }
 
     .exercise-steps li {
@@ -417,12 +429,12 @@
     }
 
     .exercise-q {
-      background: #f1f5f9;
+      background: var(--bg-surface-secondary);
       padding: 0.6rem 0.9rem;
       border-radius: 4px;
       margin-top: 0.75rem;
       font-weight: 500;
-      color: #1e293b;
+      color: var(--text-primary);
       font-size: 0.9rem;
     }
 
@@ -523,6 +535,23 @@
           <li><a href="/cours.html" class="active">Notes de cours</a></li>
         </ul>
       </nav>
+      <button id="theme-toggle" class="theme-toggle-btn" type="button" aria-label="Changer de thème" title="Basculer entre thème clair et sombre">
+        <svg class="theme-icon sun-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="theme-icon moon-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <span class="theme-label">Thème</span>
+      </button>
     </div>
   </header>
 
@@ -1226,15 +1255,37 @@ flowchart LR
   <!-- Initialisation de Mermaid.js et interaction Sidebar -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Initialise Mermaid
-      if (window.mermaid) {
+      // Sauvegarde du code source original des diagrammes Mermaid
+      const diagrams = document.querySelectorAll('.mermaid');
+      diagrams.forEach(el => {
+        el.setAttribute('data-original', el.textContent.trim());
+      });
+
+      function renderMermaid(theme) {
+        if (!window.mermaid) return;
+        const isDark = theme === 'dark';
+        diagrams.forEach(el => {
+          el.removeAttribute('data-processed');
+          el.innerHTML = el.getAttribute('data-original');
+        });
         mermaid.initialize({
-          startOnLoad: true,
-          theme: 'neutral',
+          startOnLoad: false,
+          theme: isDark ? 'dark' : 'neutral',
           securityLevel: 'loose',
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         });
+        mermaid.run();
       }
+
+      // Initialisation avec le thème actif
+      const activeTheme = document.documentElement.getAttribute('data-theme') || 
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      renderMermaid(activeTheme);
+
+      // Callback appelé par theme.js lors d'une bascule de thème
+      window.onThemeChange = function(newTheme) {
+        renderMermaid(newTheme);
+      };
 
       // Détection du scroll pour la sidebar active
       const sections = document.querySelectorAll('.course-section');
@@ -1264,5 +1315,6 @@ flowchart LR
       onScroll();
     });
   </script>
+  <script src="js/theme.js"></script>
 </body>
 </html>
